@@ -574,7 +574,7 @@ int dump_bytes(int col, char *msg,unsigned char *bytes,int length)
     print_spaces(stderr,col);
     fprintf(stderr,"%04X: ",i);
     for(int j=0;j<16;j++) if (i+j<length) fprintf(stderr," %02X",bytes[i+j]); else fprintf(stderr,"   ");
-    fprintf(stderr,"  ");
+    fprintf(stderr," | ");
     for(int j=0;j<16;j++) if (i+j<length) {
 	if (bytes[i+j]>=0x20&&bytes[i+j]<0x7f) {
 	  fprintf(stderr,"%c",bytes[i+j]);
@@ -582,6 +582,7 @@ int dump_bytes(int col, char *msg,unsigned char *bytes,int length)
       }
     fprintf(stderr,"\n");
   }
+
   return 0;
 }
 
@@ -1784,6 +1785,12 @@ int fat_readdir(struct dirent *d)
     // printf("Found dirent %d %d %d\n",dir_sector,dir_sector_offset,dir_sector_in_cluster);
 
     // XXX - Support FAT32 long names!
+
+    // for now, skip vfat entries
+    if (dir_sector_buffer[dir_sector_offset+0x0B] == 0x0F) {
+      d->d_name[0] = 0;
+      return 0;
+    }
 
     // Put cluster number in d_ino
     d->d_ino=
