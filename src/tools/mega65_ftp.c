@@ -918,7 +918,7 @@ void wait_for_sdready(void)
       if (sd_status[0]&3) {
 	// Send reset sequence
 	printf("SD card not yet ready, so reset it.\n");
-	slow_write(fd,"sffd3680 0\rsffd3680 1\r",strlen("sffd3680 0\rsffd3680 1\r"),2500);
+	slow_write(fd,"sffd3680 0\rsffd3680 1\r",strlen("sffd3680 0\rsffd3680 1\r"),2000);
 	sleep(1);
       }
     }
@@ -1801,6 +1801,13 @@ int fat_readdir(struct dirent *d)
 
     int namelen=0;
     if (dir_sector_buffer[dir_sector_offset]) {
+      // ignore any files starting with '.' (such as mac osx '._*' metadata files)
+      // NOTE: This present technique won't work, as I'll need to parse the vfat
+      // entry first to catch the '.'
+      if (dir_sector_buffer[dir_sector_offset] == '.') {
+        d->d_name[0] = 0;
+        return 0;
+      }
       for(int i=0;i<8;i++)
 	if (dir_sector_buffer[dir_sector_offset+i])
 	  d->d_name[namelen++]=dir_sector_buffer[dir_sector_offset+i];
