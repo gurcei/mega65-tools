@@ -1750,44 +1750,148 @@ int fat_opendir(char *path)
   return retVal;
 }
 
+int advance_to_next_entry(void)
+{
+  int retVal = 0;
+
+  // Advance to next entry
+  dir_sector_offset+=32;
+  if (dir_sector_offset==512) {
+    dir_sector_offset=0;
+    dir_sector++;
+    dir_sector_in_cluster++;
+    if (dir_sector_in_cluster==sectors_per_cluster) {
+      // Follow to next cluster
+      int next_cluster=get_next_cluster(dir_cluster);
+      if (next_cluster<0xFFFFFF0&&next_cluster) {
+        dir_cluster=next_cluster;
+        dir_sector_in_cluster=0;
+        dir_sector=first_cluster_sector+(next_cluster-first_cluster)*sectors_per_cluster;
+      } else {
+        // End of directory reached
+        dir_sector=-1;
+        retVal=-2;
+        return retVal;
+      }
+    }
+    if (dir_sector!=-1) retVal=read_sector(partition_start+dir_sector,dir_sector_buffer,0);
+    if (retVal) dir_sector=-1;      
+  }    
+
+  return retVal;
+}
+
+void debug_vfatchunk(void)
+{
+  int start = 0x01;
+  int len = 5;
+
+  for (int k = start; k < (start+len*2); k+=2)
+    printf("%c", dir_sector_buffer[dir_sector_offset+k]);
+
+  start = 0x0E;
+  len = 6;
+
+  for (int k = start; k < (start+len*2); k+=2)
+    printf("%c", dir_sector_buffer[dir_sector_offset+k]);
+
+  start = 0x1C;
+  len = 2;
+
+  for (int k = start; k < (start+len*2); k+=2)
+    printf("%c", dir_sector_buffer[dir_sector_offset+k]);
+
+  printf("\n");
+}
+
+void copy_to_dnamechunk_from_offset(char* dnamechunk, int offset, int numuc2chars)
+{
+  for (int k = 0; k < numuc2chars; k++)
+  {
+    dnamechunk[k] = dir_sector_buffer[dir_sector_offset+offset+k*2];
+  }
+}
+
+void copy_vfat_chars_into_dname(char* dname, int seqnumber)
+{
+  // increment char-pointer to the seqnumber string chunk we'll copy across
+  dname = dname + 13 * (seqnumber-1);
+  copy_to_dnamechunk_from_offset(dname, 0x01, 5);
+  dname += 5;
+  copy_to_dnamechunk_from_offset(dname, 0x0E, 6);
+  dname += 6;
+  copy_to_dnamechunk_from_offset(dname, 0x1C, 2);
+}
+
 int fat_readdir(struct dirent *d)
 {
   int retVal=0;
+  int vfatEntry = 0;
+  int deletedEntry = 0;
+
   do {
 
-    // Advance to next entry
-    dir_sector_offset+=32;
-    if (dir_sector_offset==512) {
-      dir_sector_offset=0;
-      dir_sector++;
-      dir_sector_in_cluster++;
-      if (dir_sector_in_cluster==sectors_per_cluster) {
-        // Follow to next cluster
-        int next_cluster=get_next_cluster(dir_cluster);
-        if (next_cluster<0xFFFFFF0&&next_cluster) {
-          dir_cluster=next_cluster;
-          dir_sector_in_cluster=0;
-          dir_sector=first_cluster_sector+(next_cluster-first_cluster)*sectors_per_cluster;
-        } else {
-          // End of directory reached
-          dir_sector=-1;
-          retVal=-1;
-          break;
-        }
-      }
-      if (dir_sector!=-1) retVal=read_sector(partition_start+dir_sector,dir_sector_buffer,0);
-      if (retVal) dir_sector=-1;      
-    }    
+    retVal = advance_to_next_entry();
+
+    if (retVal == -2) // exiting due to end-of-directory?
+    {
+      retVal = -1;
+      break;
+    }
 
     if (dir_sector==-1) { retVal=-1; break; }
     if (!d) { retVal=-1; break; }
 
     // printf("Found dirent %d %d %d\n",dir_sector,dir_sector_offset,dir_sector_in_cluster);
 
-    // XXX - Support FAT32 long names!
-
-    // for now, skip vfat entries
+    // Read in all FAT32-VFAT entries to extract out long filenames
     if (dir_sector_buffer[dir_sector_offset+0x0B] == 0x0F) {
+      vfatEntry = 1;
+      int firstTime = 1;
+      int seqnumber;
+      do
+      {
+        // printf("seq = 0x%02X\n", dir_sector_buffer[dir_sector_offset+0x00]);
+        // debug_vfatchunk();
+        int seq = dir_sector_buffer[dir_sector_offset+0x00];
+
+        if (seq == 0xE5)  // if deleted-entry, then ignore
+        {
+          //printf("deleteentry!\n");
+          deletedEntry=1;
+        }
+
+        seqnumber = seq & 0x1F;
+
+        // assure there is a null-terminator
+        if (firstTime)
+        {
+          d->d_name[seqnumber*13] = 0;
+          firstTime = 0;
+        }
+
+        // vfat seqnumbers will be parsed from high to low, each containing up to 13 UCS-2 characters
+        copy_vfat_chars_into_dname(d->d_name, seqnumber);
+        advance_to_next_entry();
+
+        // if next dirent is not a vfat entry, break out
+        if (dir_sector_buffer[dir_sector_offset+0x0B] != 0x0F)
+          break;
+      } while (seqnumber != 1);
+    }
+
+    // ignore any vfat files starting with '.' (such as mac osx '._*' metadata files)
+    // NOTE: This present technique won't work, as I'll need to parse the vfat
+    // entry first to catch the '.'
+    if (vfatEntry && d->d_name[0] == '.') {
+      //printf("._ vfat hide\n");
+      d->d_name[0] = 0;
+      return 0;
+    }
+
+    // ignored deleted vfat entries too (mac osx '._*' files are marked as deleted entries)
+    if (deletedEntry)
+    {
       d->d_name[0] = 0;
       return 0;
     }
@@ -1799,28 +1903,29 @@ int fat_readdir(struct dirent *d)
       (dir_sector_buffer[dir_sector_offset+0x14]<<16)|
       (dir_sector_buffer[dir_sector_offset+0x15]<<24);
 
-    int namelen=0;
-    if (dir_sector_buffer[dir_sector_offset]) {
-      // ignore any files starting with '.' (such as mac osx '._*' metadata files)
-      // NOTE: This present technique won't work, as I'll need to parse the vfat
-      // entry first to catch the '.'
-      if (dir_sector_buffer[dir_sector_offset] == '.') {
-        d->d_name[0] = 0;
-        return 0;
+    // if not vfat-longname, then extract out old 8.3 name
+    if (!vfatEntry)
+    {
+      int namelen=0;
+      // get the 8-byte filename
+      if (dir_sector_buffer[dir_sector_offset]) {
+        for(int i=0;i<8;i++)
+        {
+          if (dir_sector_buffer[dir_sector_offset+i])
+            d->d_name[namelen++]=dir_sector_buffer[dir_sector_offset+i];
+        }
+        while(namelen&&d->d_name[namelen-1]==' ') namelen--;
       }
-      for(int i=0;i<8;i++)
-        if (dir_sector_buffer[dir_sector_offset+i])
-          d->d_name[namelen++]=dir_sector_buffer[dir_sector_offset+i];
-      while(namelen&&d->d_name[namelen-1]==' ') namelen--;
+      // get the 3-byte extension
+      if (dir_sector_buffer[dir_sector_offset+8]&&dir_sector_buffer[dir_sector_offset+8]!=' ') {
+        d->d_name[namelen++]='.';
+        for(int i=0;i<3;i++)
+          if (dir_sector_buffer[dir_sector_offset+8+i])
+            d->d_name[namelen++]=dir_sector_buffer[dir_sector_offset+8+i];
+        while(namelen&&d->d_name[namelen-1]==' ') namelen--;
+      }
+      d->d_name[namelen]=0;
     }
-    if (dir_sector_buffer[dir_sector_offset+8]&&dir_sector_buffer[dir_sector_offset+8]!=' ') {
-      d->d_name[namelen++]='.';
-      for(int i=0;i<3;i++)
-        if (dir_sector_buffer[dir_sector_offset+8+i])
-          d->d_name[namelen++]=dir_sector_buffer[dir_sector_offset+8+i];
-      while(namelen&&d->d_name[namelen-1]==' ') namelen--;
-    }
-    d->d_name[namelen]=0;
 
     //    if (d->d_name[0]) dump_bytes(0,"dirent raw",&dir_sector_buffer[dir_sector_offset],32);
 
