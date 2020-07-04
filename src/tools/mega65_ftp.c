@@ -1,24 +1,24 @@
 /*
 
-  Upload one or more files to SD card on MEGA65
+   Upload one or more files to SD card on MEGA65
 
-Copyright (C) 2018 Paul Gardner-Stephen
-Portions Copyright (C) 2013 Serval Project Inc.
- 
-This program is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
- 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
- 
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-*/
+   Copyright (C) 2018 Paul Gardner-Stephen
+   Portions Copyright (C) 2013 Serval Project Inc.
+
+   This program is free software; you can redistribute it and/or
+   modify it under the terms of the GNU General Public License
+   as published by the Free Software Foundation; either version 2
+   of the License, or (at your option) any later version.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+   */
 
 #define _GNU_SOURCE
 
@@ -145,15 +145,15 @@ unsigned char syspart_configsector[512];
 // #define do_usleep usleep
 void do_usleep(__int64 usec) 
 { 
-    HANDLE timer; 
-    LARGE_INTEGER ft; 
+  HANDLE timer; 
+  LARGE_INTEGER ft; 
 
-    ft.QuadPart = -(10*usec); // Convert to 100 nanosecond interval, negative value indicates relative time
+  ft.QuadPart = -(10*usec); // Convert to 100 nanosecond interval, negative value indicates relative time
 
-    timer = CreateWaitableTimer(NULL, TRUE, NULL); 
-    SetWaitableTimer(timer, &ft, 0, NULL, NULL, 0); 
-    WaitForSingleObject(timer, INFINITE); 
-    CloseHandle(timer); 
+  timer = CreateWaitableTimer(NULL, TRUE, NULL); 
+  SetWaitableTimer(timer, &ft, 0, NULL, NULL, 0); 
+  WaitForSingleObject(timer, INFINITE); 
+  CloseHandle(timer); 
 }
 
 #else
@@ -169,7 +169,7 @@ void timestamp_msg(char *msg)
 #else
   fprintf(stderr,"[T+%lldsec] %s",(long long)time(0)-start_time,msg);
 #endif
-  
+
   return;
 }
 
@@ -180,35 +180,35 @@ void print_error(const char * context)
   DWORD error_code = GetLastError();
   char buffer[256];
   DWORD size = FormatMessageA(
-			      FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_MAX_WIDTH_MASK,
-			      NULL, error_code, MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US),
-			      buffer, sizeof(buffer), NULL);
+      FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_MAX_WIDTH_MASK,
+      NULL, error_code, MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US),
+      buffer, sizeof(buffer), NULL);
   if (size == 0) { buffer[0] = 0; }
   fprintf(stderr, "%s: %s\n", context, buffer);
 }
- 
+
 
 // Opens the specified serial port, configures its timeouts, and sets its
 // baud rate.  Returns a handle on success, or INVALID_HANDLE_VALUE on failure.
 HANDLE open_serial_port(const char * device, uint32_t baud_rate)
 {
   HANDLE port = CreateFileA(device, GENERIC_READ | GENERIC_WRITE, 0, NULL,
-			    OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+      OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
   if (port == INVALID_HANDLE_VALUE)
-    {
-      print_error(device);
-      return INVALID_HANDLE_VALUE;
-    }
- 
+  {
+    print_error(device);
+    return INVALID_HANDLE_VALUE;
+  }
+
   // Flush away any bytes previously read or written.
   BOOL success = FlushFileBuffers(port);
   if (!success)
-    {
-      print_error("Failed to flush serial port");
-      CloseHandle(port);
-      return INVALID_HANDLE_VALUE;
-    }
- 
+  {
+    print_error("Failed to flush serial port");
+    CloseHandle(port);
+    return INVALID_HANDLE_VALUE;
+  }
+
   // Configure read and write operations to time out after 1 ms and 100 ms, respectively.
   COMMTIMEOUTS timeouts = { 0 };
   timeouts.ReadIntervalTimeout = 0;
@@ -216,24 +216,24 @@ HANDLE open_serial_port(const char * device, uint32_t baud_rate)
   timeouts.ReadTotalTimeoutMultiplier = 0;
   timeouts.WriteTotalTimeoutConstant = 100;
   timeouts.WriteTotalTimeoutMultiplier = 0;
- 
+
   success = SetCommTimeouts(port, &timeouts);
   if (!success)
-    {
-      print_error("Failed to set serial timeouts");
-      CloseHandle(port);
-      return INVALID_HANDLE_VALUE;
-    }
- 
+  {
+    print_error("Failed to set serial timeouts");
+    CloseHandle(port);
+    return INVALID_HANDLE_VALUE;
+  }
+
   DCB state;
   state.DCBlength = sizeof(DCB);
   success = GetCommState(port, &state);
   if (!success)
-    {
-      print_error("Failed to get serial settings");
-      CloseHandle(port);
-      return INVALID_HANDLE_VALUE;
-    }
+  {
+    print_error("Failed to get serial settings");
+    CloseHandle(port);
+    return INVALID_HANDLE_VALUE;
+  }
 
   state.fBinary = TRUE;
   state.fDtrControl = DTR_CONTROL_ENABLE;
@@ -250,17 +250,17 @@ HANDLE open_serial_port(const char * device, uint32_t baud_rate)
   state.ByteSize = 8;
   state.StopBits = ONESTOPBIT;
   state.Parity = NOPARITY;
- 
+
   state.BaudRate = baud_rate;
- 
+
   success = SetCommState(port, &state);
   if (!success)
-    {
-      print_error("Failed to set serial settings");
-      CloseHandle(port);
-      return INVALID_HANDLE_VALUE;
-    }
- 
+  {
+    print_error("Failed to set serial settings");
+    CloseHandle(port);
+    return INVALID_HANDLE_VALUE;
+  }
+
   return port;
 }
 
@@ -276,10 +276,10 @@ int serialport_write(HANDLE port, uint8_t * buffer, size_t size)
     success = WriteFile(port, &buffer[offset], size - offset, &written, NULL);
     //  printf("  WriteFile() returned.\n");
     if (!success)
-      {
-	print_error("Failed to write to port");
-	return -1;
-      }
+    {
+      print_error("Failed to write to port");
+      return -1;
+    }
     if (written>0) offset+=written;
     if (offset<size) {
       // Assume buffer is full, so wait a little while
@@ -290,7 +290,7 @@ int serialport_write(HANDLE port, uint8_t * buffer, size_t size)
   if (!success) print_error("Failed to flush buffers"); 
   return size;
 }
- 
+
 // Reads bytes from the serial port.
 // Returns after all the desired bytes have been read, or if there is a
 // timeout or other error.
@@ -302,10 +302,10 @@ SSIZE_T serialport_read(HANDLE port, uint8_t * buffer, size_t size)
   //  printf("Calling ReadFile(%I64d)\n",size);
   BOOL success = ReadFile(port, buffer, size, &received, NULL);
   if (!success)
-    {
-      print_error("Failed to read from port");
-      return -1;
-    }
+  {
+    print_error("Failed to read from port");
+    return -1;
+  }
   //  printf("  ReadFile() returned. Received %ld bytes\n",received);
   return received;
 }
@@ -383,10 +383,10 @@ int monitor_sync(void)
 {
   /* Synchronise with the monitor interface.
      Send #<token> until we see the token returned to us.
-  */
+     */
 
   unsigned char read_buff[8192];
-  
+
   // Begin by sending a null command and purging input
   char cmd[8192];
   cmd[0]=0x15; // ^U
@@ -420,11 +420,11 @@ int monitor_sync(void)
       if (b>8191) b=8191;
       read_buff[b]=0;
       //      if (b>0) dump_bytes(2,"Sync input",read_buff,b);
-      
+
       //      if (b>0) dump_bytes(0,"read_data",read_buff,b);
       if (strstr((char *)read_buff,cmd)) {
-	//	printf("Found token. Synchronised with monitor.\n");
-	return 0;      
+        //	printf("Found token. Synchronised with monitor.\n");
+        return 0;      
       }
     }
     usleep(10000);
@@ -436,8 +436,8 @@ int monitor_sync(void)
 int get_pc(void)
 {
   /*
-    Get current programme counter value of CPU
-  */
+     Get current programme counter value of CPU
+     */
   slow_write_safe(fd,"r\r",2);
   do_usleep(50000);
   unsigned char buff[8192];
@@ -468,11 +468,11 @@ int stuff_keybuffer(char *s)
     if (s[i]>=' '&&s[i]<0x7c) fprintf(stderr,"%c",s[i]); else fprintf(stderr,"[$%02x]",s[i]);    
   }
   fprintf(stderr,"\n");
-  
+
   char cmd[1024];
   snprintf(cmd,1024,"s%x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\rs%x %d\r",
-	   buffer_addr,s[0],s[1],s[2],s[3],s[4],s[5],s[6],s[7],s[8],s[9],
-	   buffer_len_addr,(int)strlen(s));
+      buffer_addr,s[0],s[1],s[2],s[3],s[4],s[5],s[6],s[7],s[8],s[9],
+      buffer_len_addr,(int)strlen(s));
   return slow_write(fd,cmd,strlen(cmd),0);
 }
 
@@ -485,16 +485,16 @@ int slow_write(int fd,char *d,int l,int preWait)
   int i;
   usleep(preWait);
   for(i=0;i<l;i++)
-    {
-      int w=write(fd,&d[i],1);
-      while (w<1) {
-	usleep(1000);
-	w=write(fd,&d[i],1);
-      }
-      // Only control characters can cause us whole line delays,
-      if (d[i]<' ') { usleep(2000); } else usleep(0);
+  {
+    int w=write(fd,&d[i],1);
+    while (w<1) {
+      usleep(1000);
+      w=write(fd,&d[i],1);
     }
-    tcdrain(fd);
+    // Only control characters can cause us whole line delays,
+    if (d[i]<' ') { usleep(2000); } else usleep(0);
+  }
+  tcdrain(fd);
   return 0;
 }
 
@@ -576,10 +576,10 @@ int dump_bytes(int col, char *msg,unsigned char *bytes,int length)
     for(int j=0;j<16;j++) if (i+j<length) fprintf(stderr," %02X",bytes[i+j]); else fprintf(stderr,"   ");
     fprintf(stderr," | ");
     for(int j=0;j<16;j++) if (i+j<length) {
-	if (bytes[i+j]>=0x20&&bytes[i+j]<0x7f) {
-	  fprintf(stderr,"%c",bytes[i+j]);
-	} else fprintf(stderr,".");
-      }
+      if (bytes[i+j]>=0x20&&bytes[i+j]<0x7f) {
+        fprintf(stderr,"%c",bytes[i+j]);
+      } else fprintf(stderr,".");
+    }
     fprintf(stderr,"\n");
   }
 
@@ -591,8 +591,8 @@ int process_line(char *line,int live)
   //  printf("[%s]\n",line);
   if (!live) return 0;
   if (strstr(line,"ws h RECA8LHC")) {
-     if (!new_monitor) printf("Detected new-style UART monitor.\n");
-     new_monitor=1;
+    if (!new_monitor) printf("Detected new-style UART monitor.\n");
+    new_monitor=1;
   }
 
   {
@@ -602,40 +602,40 @@ int process_line(char *line,int live)
     unsigned int v[4];
     if (line[0]=='?') fprintf(stderr,"%s\n",line);
     if (sscanf(line,":%x:%08x%08x%08x%08x",
-	       &addr,&v[0],&v[1],&v[2],&v[3])==5) {
+          &addr,&v[0],&v[1],&v[2],&v[3])==5) {
       for(int i=0;i<16;i++) b[i]=(v[i/4]>>( (3-(i&3))*8)) &0xff;
       gotIt=1;
     }
     if (sscanf(line," :%x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x",
-	       &addr,
-	       &b[0],&b[1],&b[2],&b[3],
-	       &b[4],&b[5],&b[6],&b[7],
-	       &b[8],&b[9],&b[10],&b[11],
-	       &b[12],&b[13],&b[14],&b[15])==17) gotIt=1;
+          &addr,
+          &b[0],&b[1],&b[2],&b[3],
+          &b[4],&b[5],&b[6],&b[7],
+          &b[8],&b[9],&b[10],&b[11],
+          &b[12],&b[13],&b[14],&b[15])==17) gotIt=1;
     if (gotIt) {
       // printf("Read memory @ $%04x\n",addr);
 
       if (addr==0xf05) {
-	job_done=b[0];
-	sectors_written=b[1];
-	job_status_fresh=1;
+        job_done=b[0];
+        sectors_written=b[1];
+        job_status_fresh=1;
       }
       if (addr==0xffd3680) {
-	// SD card status registers
-	for(int i=0;i<16;i++) sd_status[i]=b[i];
-	// dump_bytes(0,"SDcard status",sd_status,16);
-	sd_status_fresh=1;
+        // SD card status registers
+        for(int i=0;i<16;i++) sd_status[i]=b[i];
+        // dump_bytes(0,"SDcard status",sd_status,16);
+        sd_status_fresh=1;
       }
       else if(addr >= READ_SECTOR_BUFFER_ADDRESS && (addr <= (READ_SECTOR_BUFFER_ADDRESS + 0x200))) {
-	// Reading sector card buffer
-	int sector_offset=addr-READ_SECTOR_BUFFER_ADDRESS;
-	// printf("Read sector buffer 0x%03x - 0x%03x\n",sector_offset,sector_offset+15);
-	if (sector_offset<512) {
-	  if (sd_read_buffer) {
-	    for(int i=0;i<16;i++) sd_read_buffer[sector_offset+i]=b[i];
-	  }
-	  sd_read_offset=sector_offset+16;
-	}
+        // Reading sector card buffer
+        int sector_offset=addr-READ_SECTOR_BUFFER_ADDRESS;
+        // printf("Read sector buffer 0x%03x - 0x%03x\n",sector_offset,sector_offset+15);
+        if (sector_offset<512) {
+          if (sd_read_buffer) {
+            for(int i=0;i<16;i++) sd_read_buffer[sector_offset+i]=b[i];
+          }
+          sd_read_offset=sector_offset+16;
+        }
       }
     }
   }
@@ -700,7 +700,7 @@ void set_speed(int fd,int serial_speed)
   t.c_cflag |= CS8 | CLOCAL;
   t.c_lflag &= ~(ICANON | ISIG | IEXTEN | ECHO | ECHOE);
   t.c_iflag &= ~(BRKINT | ICRNL | IGNBRK | IGNCR | INLCR |
-                 INPCK | ISTRIP | IXON | IXOFF | IXANY | PARMRK);
+      INPCK | ISTRIP | IXON | IXOFF | IXANY | PARMRK);
   t.c_oflag &= ~OPOST;
   if (tcsetattr(fd, TCSANOW, &t)) perror("Failed to set terminal parameters");
 
@@ -801,28 +801,28 @@ int execute_command(char *cmd)
 int main(int argc,char **argv)
 {
   start_time=time(0);
-  start_usec=gettime_us();  
-  
+  start_usec=gettime_us();
+
   int opt;
   while ((opt = getopt(argc, argv, "b:s:l:c:")) != -1) {
     switch (opt) {
-    case 'l': strcpy(serial_port,optarg); break;
-    case 's':
-      serial_speed=atoi(optarg);
-      switch(serial_speed) {
-      case 1000000:
-      case 1500000:
-      case 4000000:
-      case 230400: case 2000000: break;
-      default: usage();
-      }
-      break;
-    case 'b':
-      bitstream=strdup(optarg); break;
-    case 'c':
-      queue_command(optarg); break;
-    default: /* '?' */
-      usage();
+      case 'l': strcpy(serial_port,optarg); break;
+      case 's':
+                serial_speed=atoi(optarg);
+                switch(serial_speed) {
+                  case 1000000:
+                  case 1500000:
+                  case 4000000:
+                  case 230400: case 2000000: break;
+                  default: usage();
+                }
+                break;
+      case 'b':
+                bitstream=strdup(optarg); break;
+      case 'c':
+                queue_command(optarg); break;
+      default: /* '?' */
+                usage();
     }
   }  
 
@@ -836,7 +836,7 @@ int main(int argc,char **argv)
     exit(-1);
   }
   fcntl(fd,F_SETFL,fcntl(fd, F_GETFL, NULL)|O_NONBLOCK);
-  
+
 #ifndef APPLE
 
   // And also another way
@@ -850,7 +850,7 @@ int main(int argc,char **argv)
     int offset=strlen(serial_port);
     while(offset&&serial_port[offset-1]!='/') offset--;
     snprintf(latency_timer,1024,"/sys/bus/usb-serial/devices/%s/latency_timer",
-	     &serial_port[offset]);
+        &serial_port[offset]);
     int new_latency=999;
     FILE *f=fopen(latency_timer,"r");
     if (f) { fscanf(f,"%d",&new_latency); fclose(f); }
@@ -868,7 +868,7 @@ int main(int argc,char **argv)
     system(cmd);
     fprintf(stderr,"[T+%lldsec] Bitstream loaded\n",(long long)time(0)-start_time);
   }
-  
+
   // Set higher speed on serial interface to improve throughput, and make sure
   // we have reset.
   set_speed(fd,2000000);
@@ -879,15 +879,15 @@ int main(int argc,char **argv)
   //  set_speed(fd,2000000);  
   //  slow_write(fd,"\r+9\r",4,5000);
   //  set_speed(fd,4000000);
-  
+
   stop_cpu();
 
   load_helper();
-  
+
   sdhc_check();
-  
+
   if (!file_system_found) open_file_system();
-  
+
   if (queued_command_count) {
     for(int i=0;i<queued_command_count;i++) execute_command(queued_commands[i]);
     return 0;
@@ -900,14 +900,14 @@ int main(int argc,char **argv)
       free(cmd);
     }
   }
-  
+
   return 0;
 }
 
 void wait_for_sdready(void)
 {
   do {  
-  //    long long start=gettime_us();
+    //    long long start=gettime_us();
 
     // Ask for SD card status
     sd_status[0]=0xff;
@@ -916,10 +916,10 @@ void wait_for_sdready(void)
       slow_write(fd,"mffd3680\r",strlen("mffd3680\r"),0);
       while(!sd_status_fresh) process_waiting(fd);
       if (sd_status[0]&3) {
-	// Send reset sequence
-	printf("SD card not yet ready, so reset it.\n");
-	slow_write(fd,"sffd3680 0\rsffd3680 1\r",strlen("sffd3680 0\rsffd3680 1\r"),2000);
-	sleep(1);
+        // Send reset sequence
+        printf("SD card not yet ready, so reset it.\n");
+        slow_write(fd,"sffd3680 0\rsffd3680 1\r",strlen("sffd3680 0\rsffd3680 1\r"),2000);
+        sleep(1);
       }
     }
     //     printf("SD Card looks ready.\n");
@@ -932,11 +932,11 @@ int wait_for_sdready_passive(void)
 {
   int retVal=0;
   do {
-  //    long long start=gettime_us();
+    //    long long start=gettime_us();
 
     int tries=16;
     int sleep_time=1;
-    
+
     // Ask for SD card status
     sd_status[0]=0xff;
     process_waiting(fd);
@@ -945,11 +945,11 @@ int wait_for_sdready_passive(void)
       slow_write(fd,"mffd3680\r",strlen("mffd3680\r"),0);
       while(!sd_status_fresh) process_waiting(fd);
       if ((sd_status[0]&3)==0x03)
-	{ // printf("SD card error 0x3 - failing\n");
-	  tries--; if (tries) usleep(sleep_time); else {
-	    retVal=-1; break; }
-	  sleep_time*=2;
-	}
+      { // printf("SD card error 0x3 - failing\n");
+        tries--; if (tries) usleep(sleep_time); else {
+          retVal=-1; break; }
+        sleep_time*=2;
+      }
     }
     // printf("SD Card looks ready.\n");
     //    printf("wait_for_sdready_passive() took %lld usec\n",gettime_us()-start);
@@ -970,7 +970,7 @@ int sdhc_check(void)
   serialport_read(fd,read_buff,8192);
 
   sdhc=-1;
-  
+
   int r0=read_sector(0,buffer,1);
   int r1=read_sector(1,buffer,1);
   int r200=read_sector(0x200,buffer,1);
@@ -988,7 +988,7 @@ int fetch_ram(unsigned long address,unsigned int count,unsigned char *buffer)
 {
   /* Fetch a block of RAM into the provided buffer.
      This greatly simplifies many tasks.
-  */
+     */
 
   unsigned long addr=address;
   unsigned long end_addr;
@@ -998,7 +998,7 @@ int fetch_ram(unsigned long address,unsigned int count,unsigned char *buffer)
   int ofs=0;
 
   //  fprintf(stderr,"Fetching $%x bytes @ $%x\n",count,address);
-  
+
   //  monitor_sync();
   while(addr<(address+count)) {
     if ((address+count-addr)<17) {
@@ -1020,30 +1020,30 @@ int fetch_ram(unsigned long address,unsigned int count,unsigned char *buffer)
       ofs+=b;
       char *s=strstr((char *)read_buff,next_addr_str);
       if (s&&(strlen(s)>=42)) {
-	char b=s[42]; s[42]=0;
-	if (0) {
-	  printf("Found data for $%08x:\n%s\n",
-		 (unsigned int)addr,
-		 s);
-	} 
-	s[42]=b;
-	for(int i=0;i<16;i++) {
+        char b=s[42]; s[42]=0;
+        if (0) {
+          printf("Found data for $%08x:\n%s\n",
+              (unsigned int)addr,
+              s);
+        } 
+        s[42]=b;
+        for(int i=0;i<16;i++) {
 
-	  // Don't write more bytes than requested
-	  if ((addr-address+i)>=count) break;
-	  
-	  char hex[3];
-	  hex[0]=s[1+10+i*2+0];
-	  hex[1]=s[1+10+i*2+1];
-	  hex[2]=0;
-	  buffer[addr-address+i]=strtol(hex,NULL,16);
-	}
-	addr+=16;
+          // Don't write more bytes than requested
+          if ((addr-address+i)>=count) break;
 
-	// Shuffle buffer down
-	int s_offset=(long long)s-(long long)read_buff+42;
-	bcopy(&read_buff[s_offset],&read_buff[0],8192-(ofs-s_offset));
-	ofs-=s_offset;
+          char hex[3];
+          hex[0]=s[1+10+i*2+0];
+          hex[1]=s[1+10+i*2+1];
+          hex[2]=0;
+          buffer[addr-address+i]=strtol(hex,NULL,16);
+        }
+        addr+=16;
+
+        // Shuffle buffer down
+        int s_offset=(long long)s-(long long)read_buff+42;
+        bcopy(&read_buff[s_offset],&read_buff[0],8192-(ofs-s_offset));
+        ofs-=s_offset;
       }
     }
   }
@@ -1096,7 +1096,7 @@ int fetch_ram_cacheable(unsigned long address,unsigned int count,unsigned char *
   // It's valid in the cache
   bcopy(&ram_cache[address],buffer,count);
   return 0;
-  
+
 }
 
 
@@ -1104,15 +1104,15 @@ int detect_mode(void)
 {
   uint8_t read_buff[8192];
   /*
-    Set saw_c64_mode or saw_c65_mode according to what we can discover. 
-    We can look at the C64/C65 charset bit in $D030 for a good clue.
-    But we also really want to know that the CPU is in the keyboard 
-    input loop for either of the modes, if possible. OpenROMs being
-    under development makes this tricky.
-  */
+     Set saw_c64_mode or saw_c65_mode according to what we can discover. 
+     We can look at the C64/C65 charset bit in $D030 for a good clue.
+     But we also really want to know that the CPU is in the keyboard 
+     input loop for either of the modes, if possible. OpenROMs being
+     under development makes this tricky.
+     */
   saw_c65_mode=0;
   saw_c64_mode=0;
-  
+
   // flush out any serial data that occurred after the restart.
   serialport_read(fd,read_buff,8192);
 
@@ -1130,8 +1130,8 @@ int detect_mode(void)
     do_usleep(50000);
     d054=mega65_peek(0xffd3054);
   }
-  
-  
+
+
   //  printf("$D030 = $%02X\n",mem_buff[0]);
   if (mem_buff[0]==0x64) {
     // Probably C65 mode
@@ -1141,16 +1141,16 @@ int detect_mode(void)
     for (int i=0;i<10;i++) {
       int pc=get_pc();
       if (pc>=0xe1a0&&pc<=0xe1b4) in_range++; else {
-	// C65 ROM does checksum, so wait a while if it is in that range
-	if (pc>=0xb000&&pc<0xc000) sleep(1);
-	// Or booting from internal drive is also slow
-	if (pc>=0x9c00&&pc<0x9d00) sleep(1);
-	// Or something else it does while booting
-	if (pc>=0xfeb0&&pc<0xfed0) sleep(1);
-	else {
-	  //	  fprintf(stderr,"Odd PC=$%04x\n",pc);
-	  do_usleep(100000);
-	}
+        // C65 ROM does checksum, so wait a while if it is in that range
+        if (pc>=0xb000&&pc<0xc000) sleep(1);
+        // Or booting from internal drive is also slow
+        if (pc>=0x9c00&&pc<0x9d00) sleep(1);
+        // Or something else it does while booting
+        if (pc>=0xfeb0&&pc<0xfed0) sleep(1);
+        else {
+          //	  fprintf(stderr,"Odd PC=$%04x\n",pc);
+          do_usleep(100000);
+        }
       }
     }
     if (in_range>3) {
@@ -1168,8 +1168,8 @@ int detect_mode(void)
       // XXX Might not work with OpenROMs?
       if (pc>=0xe5cd&&pc<=0xe5d5) in_range++;
       else {
-	//	printf("Odd PC=$%04x\n",pc);
-	usleep(100000);
+        //	printf("Odd PC=$%04x\n",pc);
+        usleep(100000);
       }
     }
     if (in_range>3) {
@@ -1194,21 +1194,21 @@ int load_helper(void)
       char cmd[1024];
 
       detect_mode();
-   
+
       if ((!saw_c64_mode)) {
-	printf("Trying to switch to C64 mode...\n");
-	monitor_sync();
-	stuff_keybuffer("GO64\rY\r");    
-	saw_c65_mode=0;
-	do_usleep(100000);
-	detect_mode();
-	while (!saw_c64_mode) {
-	  fprintf(stderr,"WARNING: Failed to switch to C64 mode.\n");
-	  monitor_sync();
-	  stuff_keybuffer("GO64\rY\r");    
-	  do_usleep(100000);
-	  detect_mode();
-	}
+        printf("Trying to switch to C64 mode...\n");
+        monitor_sync();
+        stuff_keybuffer("GO64\rY\r");    
+        saw_c65_mode=0;
+        do_usleep(100000);
+        detect_mode();
+        while (!saw_c64_mode) {
+          fprintf(stderr,"WARNING: Failed to switch to C64 mode.\n");
+          monitor_sync();
+          stuff_keybuffer("GO64\rY\r");    
+          do_usleep(100000);
+          detect_mode();
+        }
       }
 
       snprintf(cmd,1024,"t1\r");
@@ -1220,25 +1220,25 @@ int load_helper(void)
       process_waiting(fd);
       int offset=2;
       while(offset<helperroutine_len) {
-	int written=write(fd,&helperroutine[offset],helperroutine_len-offset);
-	if (written!=helperroutine_len) {
-	  usleep(10000);
-	}
-	offset+=written;
+        int written=write(fd,&helperroutine[offset],helperroutine_len-offset);
+        if (written!=helperroutine_len) {
+          usleep(10000);
+        }
+        offset+=written;
       }
       slow_write(fd,"\r",1,500);
       process_waiting(fd);
-      
+
       // Launch helper programme
       sleep(1);
       snprintf(cmd,1024,"g080d\r");
       slow_write(fd,cmd,strlen(cmd),500);
       snprintf(cmd,1024,"t0\r");
       slow_write(fd,cmd,strlen(cmd),500);
-      
+
       helper_installed=1;
       printf("\nNOTE: Fast SD card access routine installed.\n");
-      
+
     }
   } while(0);
   return retVal;
@@ -1257,7 +1257,7 @@ uint8_t q_rle_count=0,q_raw_count=0;
 void queue_data_decode(uint8_t v)
 {
   if (0)  fprintf(stderr,"Decoding $%02x, rle_count=%d, raw_count=%d, data_byte_count=$%04x\n",
-		  v,q_rle_count,q_raw_count,data_byte_count);
+      v,q_rle_count,q_raw_count,data_byte_count);
   if (q_rle_count) {
     //    fprintf(stderr,"$%02x x byte $%02x\n",q_rle_count,v);
     data_byte_count-=q_rle_count;
@@ -1278,7 +1278,7 @@ void queue_data_decode(uint8_t v)
     } else {
       q_raw_count=v&0x7f;
       //      fprintf(stderr,"$%02x raw bytes\n",q_raw_count);
-      
+
     }
   }
 }
@@ -1306,8 +1306,8 @@ void queue_add_job(uint8_t *j,int len)
     b=serialport_read(fd,read_buff,8192);
     //    if (b>0) dump_bytes(2,"Purged input",read_buff,b);
   }
-  
-  
+
+
 }
 
 void job_process_results(void)
@@ -1315,13 +1315,13 @@ void job_process_results(void)
   long long now =gettime_us();
   queue_read_len=0;
   uint8_t buff[8192];
-  
+
   uint8_t recent[32];
 
   data_byte_count=0;
 
   int debug_rx=0;
-  
+
   while (1) {
     int b=read(fd,buff,8192);
     if (b<1) usleep(0);
@@ -1330,40 +1330,40 @@ void job_process_results(void)
       // Keep rolling window of most recent chars for interpretting job
       // results
       if (data_byte_count)
-	{
-	  queue_data_decode(buff[i]);
-	} else {
-	bcopy(&recent[1],&recent[0],30);
-	recent[30]=buff[i];
-	recent[31]=0;
-	if (!strncmp(&recent[30-10],"FTBATCHDONE",11)) {
-	  long long endtime =gettime_us();
-	  if (debug_rx) printf("%lld: Saw end of batch job after %lld usec\n",endtime-start_usec,endtime-now);
-	  //	  dump_bytes(0,"read data",queue_read_data,queue_read_len);
-	  return;
-	}
-	if (!strncmp(recent,"FTJOBDONE:",10)) {
-	  int jn=atoi((char *)&recent[10]);	  
-	  if (debug_rx) printf("Saw job #%d completion.\n",jn);	  
-	}
-	int j_addr,n;
-	uint32_t transfer_size;
-	int fn=sscanf(recent,"FTJOBDATA:%x:%x:%n",&j_addr,&transfer_size,&n);
-	if (fn==2) {
-	  if (debug_rx)
-	    printf("Spotted job data: Reading $%x bytes of data, offset %d,"
-		   " %02x %02x\n",transfer_size,n,
-		   recent[n],recent[n+1]
-		   );
-	  q_rle_count=0; q_raw_count=0;
-	  data_byte_count=transfer_size;
-	  // Don't forget to process the bytes we have already injested
-	  for(int k=n;k<=30;k++) {
-	    if (data_byte_count) {
-	      queue_data_decode(recent[k]);
-	    }
-	  }
-	}
+      {
+        queue_data_decode(buff[i]);
+      } else {
+        bcopy(&recent[1],&recent[0],30);
+        recent[30]=buff[i];
+        recent[31]=0;
+        if (!strncmp(&recent[30-10],"FTBATCHDONE",11)) {
+          long long endtime =gettime_us();
+          if (debug_rx) printf("%lld: Saw end of batch job after %lld usec\n",endtime-start_usec,endtime-now);
+          //	  dump_bytes(0,"read data",queue_read_data,queue_read_len);
+          return;
+        }
+        if (!strncmp(recent,"FTJOBDONE:",10)) {
+          int jn=atoi((char *)&recent[10]);	  
+          if (debug_rx) printf("Saw job #%d completion.\n",jn);	  
+        }
+        int j_addr,n;
+        uint32_t transfer_size;
+        int fn=sscanf(recent,"FTJOBDATA:%x:%x:%n",&j_addr,&transfer_size,&n);
+        if (fn==2) {
+          if (debug_rx)
+            printf("Spotted job data: Reading $%x bytes of data, offset %d,"
+                " %02x %02x\n",transfer_size,n,
+                recent[n],recent[n+1]
+                );
+          q_rle_count=0; q_raw_count=0;
+          data_byte_count=transfer_size;
+          // Don't forget to process the bytes we have already injested
+          for(int k=n;k<=30;k++) {
+            if (data_byte_count) {
+              queue_data_decode(recent[k]);
+            }
+          }
+        }
       }
     }
   }
@@ -1374,7 +1374,7 @@ void queue_execute(void)
   char cmd[1024];
 
   long long start = gettime_us();
-  
+
   // Push queued jobs in on go
   sprintf(cmd,"l%x %x\r",0xc001,queue_addr);
   slow_write(fd,cmd,strlen(cmd),0);
@@ -1383,12 +1383,12 @@ void queue_execute(void)
   usleep(1000); 
   serialport_write(fd,queue_cmds,queue_addr-0xc001);
   usleep(3*(queue_addr-0xc001));
-  
+
   sprintf(cmd,"sc000 %x\r",queue_jobs);
   slow_write(fd,cmd,strlen(cmd),0);
   long long end = gettime_us();
   //  printf("%lld Executing queued jobs (took %lld us to dispatch)\n",end-start_usec,end-start);
-  
+
   job_process_results();
   queue_addr=0xc001;
   queue_jobs=0;
@@ -1421,28 +1421,28 @@ int execute_write_queue(void)
   do {
     char cmd[1024];
     printf("Executing write queue with %d sectors in the queue (write_buffer_offset=$%08x)\n",
-	   write_sector_count,write_buffer_offset);
+        write_sector_count,write_buffer_offset);
     snprintf(cmd,1024,"l%x %x\r",0x50000,(0x50000+write_buffer_offset)&0xffff);
     //    printf("CMD: '%s'\n",cmd);
     slow_write(fd,cmd,strlen(cmd),1000);
     usleep(5000);
     int offset=0;
     while (offset<write_buffer_offset)
-      {
-	int written=write(fd,&write_data_buffer[offset],write_buffer_offset-offset);
-	if (written>0) offset+=written;
-	else usleep(0);
-      }
+    {
+      int written=write(fd,&write_data_buffer[offset],write_buffer_offset-offset);
+      if (written>0) offset+=written;
+      else usleep(0);
+    }
     usleep(3*write_buffer_offset);
 
     // XXX - Sort sector number order and merge consecutive writes into
     // multi-sector writes would be a good idea here.
     for(int i=0;i<write_sector_count;i++)
-      {
-	queue_physical_write_sector(write_sector_numbers[i],0x50000+(i<<9));
-      }
+    {
+      queue_physical_write_sector(write_sector_numbers[i],0x50000+(i<<9));
+    }
     queue_execute();
-    
+
     // Reset write queue
     write_buffer_offset=0;
     write_sector_count=0;
@@ -1466,7 +1466,7 @@ void queue_write_sector(uint32_t sector_number, uint8_t *buffer)
   // (only 32KB at a time, as the l command for fast pushing data
   // can't do 64KB
   if (write_buffer_offset>=32768) execute_write_queue();
-  
+
   bcopy(buffer,&write_data_buffer[write_buffer_offset],512);
   write_buffer_offset+=512;
   write_sector_numbers[write_sector_count]=sector_number;
@@ -1523,10 +1523,10 @@ int read_sector(const unsigned int sector_number,unsigned char *buffer,int noCac
 
     if (!noCacheP) {
       for(int i=0;i<sector_cache_count;i++) {
-	if (sector_cache_sectors[i]==sector_number) {
-	  bcopy(sector_cache[i],buffer,512);
-	  retVal=0; cachedRead=1; break;
-	}
+        if (sector_cache_sectors[i]==sector_number) {
+          bcopy(sector_cache[i],buffer,512);
+          retVal=0; cachedRead=1; break;
+        }
       }
     }
 
@@ -1537,7 +1537,7 @@ int read_sector(const unsigned int sector_number,unsigned char *buffer,int noCac
     // lower latency than the old way
     // Request multiple sectors at once to make it more efficient
     int batch_read_size=16;
-    
+
     for(int n=0;n<batch_read_size;n++)
       queue_read_sector(sector_number+n,0x40000+(n<<9));
     queue_read_mem(0x40000,512*batch_read_size);
@@ -1547,25 +1547,25 @@ int read_sector(const unsigned int sector_number,unsigned char *buffer,int noCac
       bcopy(&queue_read_data[n<<9],buffer,512);
       //      printf("Sector $%08x:\n",sector_number+n);
       //      dump_bytes(3,"read sector",buffer,512);
-      
-    // Store in cache / update cache
+
+      // Store in cache / update cache
       int i;
       for(i=0;i<sector_cache_count;i++) 
-	if (sector_cache_sectors[i]==sector_number+n) break;
+        if (sector_cache_sectors[i]==sector_number+n) break;
       if (i<SECTOR_CACHE_SIZE) {
-	bcopy(buffer,sector_cache[i],512);
-	sector_cache_sectors[i]=sector_number+n;
+        bcopy(buffer,sector_cache[i],512);
+        sector_cache_sectors[i]=sector_number+n;
       }
       if (sector_cache_count<(i+1)) sector_cache_count=i+1;
     }
 
     // Make sure to return the actual sector that was asked for
     bcopy(&queue_read_data[0],buffer,512);
-    
+
   } while(0);
   if (retVal) printf("FAIL reading sector %d\n",sector_number);
   return retVal;
-     
+
 }
 
 unsigned char verify[512];
@@ -1584,7 +1584,7 @@ int write_sector(const unsigned int sector_number,unsigned char *buffer)
     }
 
     queue_write_sector(sector_number,buffer);
-    
+
     // Store in cache / update cache
     int i;
     for(i=0;i<sector_cache_count;i++) 
@@ -1595,11 +1595,11 @@ int write_sector(const unsigned int sector_number,unsigned char *buffer)
     }
     if (sector_cache_count<(i+1)) sector_cache_count=i+1;
 
-    
+
   } while(0);
   if (retVal) printf("FAIL writing sector %d\n",sector_number);
   return retVal;
-     
+
 }
 
 int open_file_system(void)
@@ -1616,31 +1616,31 @@ int open_file_system(void)
       unsigned char *part_ent = &mbr[0x1be + (i*0x10)];
       // dump_bytes(0,"partent",part_ent,16);
       if (part_ent[4]==0x0c||part_ent[4]==0x0b) {
-	partition_start=part_ent[8]+(part_ent[9]<<8)+(part_ent[10]<<16)+(part_ent[11]<<24);
-	partition_size=part_ent[12]+(part_ent[13]<<8)+(part_ent[14]<<16)+(part_ent[15]<<24);
-	printf("Found FAT32 partition in partition slot %d : start sector=$%x, size=%d MB\n",
-	       i,partition_start,partition_size/2048);
+        partition_start=part_ent[8]+(part_ent[9]<<8)+(part_ent[10]<<16)+(part_ent[11]<<24);
+        partition_size=part_ent[12]+(part_ent[13]<<8)+(part_ent[14]<<16)+(part_ent[15]<<24);
+        printf("Found FAT32 partition in partition slot %d : start sector=$%x, size=%d MB\n",
+            i,partition_start,partition_size/2048);
       }
       if (part_ent[4]==0x41) {
-	syspart_start=part_ent[8]+(part_ent[9]<<8)+(part_ent[10]<<16)+(part_ent[11]<<24);
-	syspart_size=part_ent[12]+(part_ent[13]<<8)+(part_ent[14]<<16)+(part_ent[15]<<24);
-	printf("Found MEGA65 system partition in partition slot %d : start sector=$%x, size=%d MB\n",
-	       i,syspart_start,syspart_size/2048);	
+        syspart_start=part_ent[8]+(part_ent[9]<<8)+(part_ent[10]<<16)+(part_ent[11]<<24);
+        syspart_size=part_ent[12]+(part_ent[13]<<8)+(part_ent[14]<<16)+(part_ent[15]<<24);
+        printf("Found MEGA65 system partition in partition slot %d : start sector=$%x, size=%d MB\n",
+            i,syspart_start,syspart_size/2048);	
       }
     }
 
     if (syspart_start) {
       // Ok, so we know where the partition starts, so now find the FATs
       if (read_sector(syspart_start,syspart_sector0,0)) {
-	printf("ERROR: Could not read system partition sector 0\n");
-	retVal=-1;
-	break;
+        printf("ERROR: Could not read system partition sector 0\n");
+        retVal=-1;
+        break;
       }
       if (strncmp("MEGA65SYS00",(char *)&syspart_sector0[0],10)) {
-	printf("ERROR: MEGA65 System Partition is missing MEGA65SYS00 marker.\n");
-	dump_bytes(0,"SYSPART Sector 0",syspart_sector0,512);
-	retVal=-1;
-	break;
+        printf("ERROR: MEGA65 System Partition is missing MEGA65SYS00 marker.\n");
+        dump_bytes(0,"SYSPART Sector 0",syspart_sector0,512);
+        retVal=-1;
+        break;
       }
       syspart_freeze_area=syspart_sector0[0x10]+(syspart_sector0[0x11]<<8)+(syspart_sector0[0x12]<<16)+(syspart_sector0[0x13]<<24);
       syspart_freeze_program_size=syspart_sector0[0x14]+(syspart_sector0[0x15]<<8)+(syspart_sector0[0x16]<<16)+(syspart_sector0[0x17]<<24);
@@ -1653,7 +1653,7 @@ int open_file_system(void)
       syspart_service_slot_count=syspart_sector0[0x2c]+(syspart_sector0[0x2d]<<8);
       syspart_service_slotdir_sectors=syspart_sector0[0x2e]+(syspart_sector0[0x2f]<<8);
     }
-    
+
     if (!partition_start) { retVal=-1; break; }
     if (!partition_size) { retVal=-1; break; }
 
@@ -1662,39 +1662,39 @@ int open_file_system(void)
       printf("ERROR: Could not read FAT MBR\n");
       retVal=-1; break; }
 
-    if (fat_mbr[510]!=0x55) {
-      printf("ERROR: Invalid FAT MBR signature in sector %d ($%x)\n",partition_start,partition_start);
-      retVal=-1; break;
-    }
-    if (fat_mbr[511]!=0xAA) {
-      printf("ERROR: Invalid FAT MBR signature in sector %d ($%x)\n",partition_start,partition_start);
-      dump_bytes(0,"fat_mbr",fat_mbr,512);
-      retVal=-1; break;
-    }
-    if (fat_mbr[12]!=2) {
-      printf("ERROR: FAT32 file system uses a sector size other than 512 bytes\n");
-      retVal=-1; break;
-    }
-    if (fat_mbr[16]!=2) {
-      printf("ERROR: FAT32 file system has more or less than 2 FATs\n");
-      retVal=-1; break;
-    }    
-    sectors_per_cluster=fat_mbr[13];
-    reserved_sectors=fat_mbr[14]+(fat_mbr[15]<<8);
-    data_sectors=(fat_mbr[0x20]<<0)|(fat_mbr[0x21]<<8)|(fat_mbr[0x22]<<16)|(fat_mbr[0x23]<<24);
-    sectors_per_fat=(fat_mbr[0x24]<<0)|(fat_mbr[0x25]<<8)|(fat_mbr[0x26]<<16)|(fat_mbr[0x27]<<24);
-    first_cluster=(fat_mbr[0x2c]<<0)|(fat_mbr[0x2d]<<8)|(fat_mbr[0x2e]<<16)|(fat_mbr[0x2f]<<24);
-    fsinfo_sector=fat_mbr[0x30]+(fat_mbr[0x31]<<8);
-    fat1_sector=reserved_sectors;
-    fat2_sector=fat1_sector+sectors_per_fat;
-    first_cluster_sector=fat2_sector+sectors_per_fat;
-    
-    printf("FAT32 file system has %dMB formatted capacity, first cluster = %d, %d sectors per FAT\n",
-	   data_sectors/2048,first_cluster,sectors_per_fat);
-    printf("FATs begin at sector 0x%x and 0x%x\n",fat1_sector,fat2_sector);
+      if (fat_mbr[510]!=0x55) {
+        printf("ERROR: Invalid FAT MBR signature in sector %d ($%x)\n",partition_start,partition_start);
+        retVal=-1; break;
+      }
+      if (fat_mbr[511]!=0xAA) {
+        printf("ERROR: Invalid FAT MBR signature in sector %d ($%x)\n",partition_start,partition_start);
+        dump_bytes(0,"fat_mbr",fat_mbr,512);
+        retVal=-1; break;
+      }
+      if (fat_mbr[12]!=2) {
+        printf("ERROR: FAT32 file system uses a sector size other than 512 bytes\n");
+        retVal=-1; break;
+      }
+      if (fat_mbr[16]!=2) {
+        printf("ERROR: FAT32 file system has more or less than 2 FATs\n");
+        retVal=-1; break;
+      }    
+      sectors_per_cluster=fat_mbr[13];
+      reserved_sectors=fat_mbr[14]+(fat_mbr[15]<<8);
+      data_sectors=(fat_mbr[0x20]<<0)|(fat_mbr[0x21]<<8)|(fat_mbr[0x22]<<16)|(fat_mbr[0x23]<<24);
+      sectors_per_fat=(fat_mbr[0x24]<<0)|(fat_mbr[0x25]<<8)|(fat_mbr[0x26]<<16)|(fat_mbr[0x27]<<24);
+      first_cluster=(fat_mbr[0x2c]<<0)|(fat_mbr[0x2d]<<8)|(fat_mbr[0x2e]<<16)|(fat_mbr[0x2f]<<24);
+      fsinfo_sector=fat_mbr[0x30]+(fat_mbr[0x31]<<8);
+      fat1_sector=reserved_sectors;
+      fat2_sector=fat1_sector+sectors_per_fat;
+      first_cluster_sector=fat2_sector+sectors_per_fat;
 
-    file_system_found=1;
-    
+      printf("FAT32 file system has %dMB formatted capacity, first cluster = %d, %d sectors per FAT\n",
+          data_sectors/2048,first_cluster,sectors_per_fat);
+      printf("FATs begin at sector 0x%x and 0x%x\n",fat1_sector,fat2_sector);
+
+      file_system_found=1;
+
   } while (0);
   return retVal;
 }
@@ -1704,7 +1704,7 @@ unsigned char buf[512];
 unsigned int get_next_cluster(int cluster)
 {
   unsigned int retVal=0xFFFFFFFF;
-  
+
   do {
     // Read chain entry for this cluster
     int cluster_sector_number=cluster/(512/4);
@@ -1719,10 +1719,10 @@ unsigned int get_next_cluster(int cluster)
       (buf[cluster_sector_offset+1]<<8)|
       (buf[cluster_sector_offset+2]<<16)|
       (buf[cluster_sector_offset+3]<<24);
-    
+
   } while(0);
   return retVal;
-  
+
 }
 
 unsigned char dir_sector_buffer[512];
@@ -1745,7 +1745,7 @@ int fat_opendir(char *path)
     dir_sector_in_cluster=0;
     retVal=read_sector(partition_start+dir_sector,dir_sector_buffer,0);
     if (retVal) dir_sector=-1;
-    
+
   } while(0);
   return retVal;
 }
@@ -1762,18 +1762,18 @@ int fat_readdir(struct dirent *d)
       dir_sector++;
       dir_sector_in_cluster++;
       if (dir_sector_in_cluster==sectors_per_cluster) {
-	// Follow to next cluster
-	int next_cluster=get_next_cluster(dir_cluster);
-	if (next_cluster<0xFFFFFF0&&next_cluster) {
-	  dir_cluster=next_cluster;
-	  dir_sector_in_cluster=0;
-	  dir_sector=first_cluster_sector+(next_cluster-first_cluster)*sectors_per_cluster;
-	} else {
-	  // End of directory reached
-	  dir_sector=-1;
-	  retVal=-1;
-	  break;
-	}
+        // Follow to next cluster
+        int next_cluster=get_next_cluster(dir_cluster);
+        if (next_cluster<0xFFFFFF0&&next_cluster) {
+          dir_cluster=next_cluster;
+          dir_sector_in_cluster=0;
+          dir_sector=first_cluster_sector+(next_cluster-first_cluster)*sectors_per_cluster;
+        } else {
+          // End of directory reached
+          dir_sector=-1;
+          retVal=-1;
+          break;
+        }
       }
       if (dir_sector!=-1) retVal=read_sector(partition_start+dir_sector,dir_sector_buffer,0);
       if (retVal) dir_sector=-1;      
@@ -1809,21 +1809,21 @@ int fat_readdir(struct dirent *d)
         return 0;
       }
       for(int i=0;i<8;i++)
-	if (dir_sector_buffer[dir_sector_offset+i])
-	  d->d_name[namelen++]=dir_sector_buffer[dir_sector_offset+i];
+        if (dir_sector_buffer[dir_sector_offset+i])
+          d->d_name[namelen++]=dir_sector_buffer[dir_sector_offset+i];
       while(namelen&&d->d_name[namelen-1]==' ') namelen--;
     }
     if (dir_sector_buffer[dir_sector_offset+8]&&dir_sector_buffer[dir_sector_offset+8]!=' ') {
       d->d_name[namelen++]='.';
       for(int i=0;i<3;i++)
-	if (dir_sector_buffer[dir_sector_offset+8+i])
-	  d->d_name[namelen++]=dir_sector_buffer[dir_sector_offset+8+i];
+        if (dir_sector_buffer[dir_sector_offset+8+i])
+          d->d_name[namelen++]=dir_sector_buffer[dir_sector_offset+8+i];
       while(namelen&&d->d_name[namelen-1]==' ') namelen--;
     }
     d->d_name[namelen]=0;
 
     //    if (d->d_name[0]) dump_bytes(0,"dirent raw",&dir_sector_buffer[dir_sector_offset],32);
-    
+
     d->d_off= //  XXX As a hack we put the size here
       (dir_sector_buffer[dir_sector_offset+0x1C]<<0)|
       (dir_sector_buffer[dir_sector_offset+0x1D]<<8)|
@@ -1858,10 +1858,10 @@ int chain_cluster(unsigned int cluster,unsigned int next_cluster)
     }
 
     //    dump_bytes(0,"FAT sector",fat_sector,512);
-    
+
     if (0) printf("Marking cluster $%x in use by writing to offset $%x of FAT sector $%x\n",
-		  cluster,fat_sector_offset,fat_sector_num);
-    
+        cluster,fat_sector_offset,fat_sector_num);
+
     // Set the bytes for this cluster to $0FFFFF8 to mark end of chain and in use
     fat_sector[fat_sector_offset+0]=(next_cluster>>0)&0xff;
     fat_sector[fat_sector_offset+1]=(next_cluster>>8)&0xff;
@@ -1875,17 +1875,17 @@ int chain_cluster(unsigned int cluster,unsigned int next_cluster)
       printf("ERROR: Failed to write updated FAT sector $%x to FAT1\n",fat_sector_num);
       retVal=-1; break; }
 
-    if (0) printf("Marking cluster in use in FAT2\n");
+      if (0) printf("Marking cluster in use in FAT2\n");
 
-    // Write sector back to FAT2
-    if (write_sector(partition_start+fat2_sector+fat_sector_num,fat_sector)) {
-      printf("ERROR: Failed to write updated FAT sector $%x to FAT1\n",fat_sector_num);
-      retVal=-1; break; }
+      // Write sector back to FAT2
+      if (write_sector(partition_start+fat2_sector+fat_sector_num,fat_sector)) {
+        printf("ERROR: Failed to write updated FAT sector $%x to FAT1\n",fat_sector_num);
+        retVal=-1; break; }
 
-    if (0) printf("Done allocating cluster\n");
-    
+        if (0) printf("Done allocating cluster\n");
+
   } while(0);
-  
+
   return retVal;
 }
 
@@ -1909,10 +1909,10 @@ int allocate_cluster(unsigned int cluster)
     }
 
     //    dump_bytes(0,"FAT sector",fat_sector,512);
-    
+
     if (0) printf("Marking cluster $%x in use by writing to offset $%x of FAT sector $%x\n",
-		  cluster,fat_sector_offset,fat_sector_num);
-    
+        cluster,fat_sector_offset,fat_sector_num);
+
     // Set the bytes for this cluster to $0FFFFF8 to mark end of chain and in use
     fat_sector[fat_sector_offset+0]=0xf8;
     fat_sector[fat_sector_offset+1]=0xff;
@@ -1926,17 +1926,17 @@ int allocate_cluster(unsigned int cluster)
       printf("ERROR: Failed to write updated FAT sector $%x to FAT1\n",fat_sector_num);
       retVal=-1; break; }
 
-    if (0) printf("Marking cluster in use in FAT2\n");
+      if (0) printf("Marking cluster in use in FAT2\n");
 
-    // Write sector back to FAT2
-    if (write_sector(partition_start+fat2_sector+fat_sector_num,fat_sector)) {
-      printf("ERROR: Failed to write updated FAT sector $%x to FAT1\n",fat_sector_num);
-      retVal=-1; break; }
+      // Write sector back to FAT2
+      if (write_sector(partition_start+fat2_sector+fat_sector_num,fat_sector)) {
+        printf("ERROR: Failed to write updated FAT sector $%x to FAT1\n",fat_sector_num);
+        retVal=-1; break; }
 
-    if (0) printf("Done allocating cluster\n");
-    
+        if (0) printf("Done allocating cluster\n");
+
   } while(0);
-  
+
   return retVal;
 }
 
@@ -1966,9 +1966,9 @@ unsigned int chained_cluster(unsigned int cluster)
     retVal|=fat_sector[fat_sector_offset+3]<<24;
 
     //    printf("Cluster %d chains to cluster %d ($%x)\n",cluster,retVal,retVal);
-    
+
   } while(0);
-  
+
   return retVal;
 }
 
@@ -1986,37 +1986,37 @@ unsigned int find_free_cluster(unsigned int first_cluster)
 
     i = first_cluster / (512/4);
     o = (first_cluster % (512/4)) * 4;
-    
+
     for(;i<sectors_per_fat;i++) {
       // Read FAT sector
       //      printf("Checking FAT sector $%x for free clusters.\n",i);
       if (read_sector(partition_start+fat1_sector+i,fat_sector,0)) {
-	printf("ERROR: Failed to read sector $%x of first FAT\n",i);
-	retVal=-1; break;
+        printf("ERROR: Failed to read sector $%x of first FAT\n",i);
+        retVal=-1; break;
       }
 
       if (retVal) break;
-      
+
       // Search for free sectors
       for(;o<512;o+=4) {
-	if (!(fat_sector[o]|fat_sector[o+1]|fat_sector[o+2]|fat_sector[o+3]))
-	  {
-	    // Found a free cluster.
-	    cluster = i*(512/4)+(o/4);
-	    // printf("cluster sector %d, offset %d yields cluster %d\n",i,o,cluster);
-	    break;
-	  }
+        if (!(fat_sector[o]|fat_sector[o+1]|fat_sector[o+2]|fat_sector[o+3]))
+        {
+          // Found a free cluster.
+          cluster = i*(512/4)+(o/4);
+          // printf("cluster sector %d, offset %d yields cluster %d\n",i,o,cluster);
+          break;
+        }
       }
       o=0;
-    
+
       if (cluster||retVal) break;
     }
 
     // printf("I believe cluster $%x is free.\n",cluster);
-    
+
     retVal=cluster;
   } while(0);
-  
+
   return retVal;
 }
 
@@ -2036,7 +2036,7 @@ int show_directory(char *path)
     // printf("Opened directory, dir_sector=%d (absolute sector = %d)\n",dir_sector,partition_start+dir_sector);
     while(!fat_readdir(&de)) {
       if (de.d_name[0]&&(de.d_off>=0))
-	printf("%12d %s\n",(int)de.d_off,de.d_name);
+        printf("%12d %s\n",(int)de.d_off,de.d_name);
     }
   } while(0);
 
@@ -2062,9 +2062,9 @@ int rename_file(char *name,char *dest_name)
       // if (de.d_name[0]) printf("'%s'   %d\n",de.d_name,(int)de.d_off);
       // else dump_bytes(0,"empty dirent",&dir_sector_buffer[dir_sector_offset],32);
       if (!strcasecmp(de.d_name,name)) {
-	// Found file, so will replace it
-	printf("%s already exists on the file system, beginning at cluster %d\n",name,(int)de.d_ino);
-	break;
+        // Found file, so will replace it
+        printf("%s already exists on the file system, beginning at cluster %d\n",name,(int)de.d_ino);
+        break;
       }
     }
     if (dir_sector==-1) {
@@ -2076,18 +2076,18 @@ int rename_file(char *name,char *dest_name)
     for(int i=0;i<11;i++) dir_sector_buffer[dir_sector_offset+i]=0x20;
     for(int i=0;i<9;i++)
       if (dest_name[i]=='.') {
-	// Write out extension
-	for(int j=0;j<3;j++)
-	  if (dest_name[i+1+j]) dir_sector_buffer[dir_sector_offset+8+j]=dest_name[i+1+j];
-	break;
+        // Write out extension
+        for(int j=0;j<3;j++)
+          if (dest_name[i+1+j]) dir_sector_buffer[dir_sector_offset+8+j]=dest_name[i+1+j];
+        break;
       } else if (!dest_name[i]) break;
       else dir_sector_buffer[dir_sector_offset+i]=dest_name[i];
-    
+
     // Write modified directory entry back to disk
     if (write_sector(partition_start+dir_sector,dir_sector_buffer)) {
       printf("Failed to write updated directory sector.\n");
       retVal=-1; break; }
-    
+
   } while(0);
 
   return retVal;
@@ -2101,7 +2101,7 @@ int upload_file(char *name,char *dest_name)
   do {
 
     time_t upload_start=time(0);
-    
+
     struct stat st;
     if (stat(name,&st)) {
       fprintf(stderr,"ERROR: Could not stat file '%s'\n",name);
@@ -2122,9 +2122,9 @@ int upload_file(char *name,char *dest_name)
       // if (de.d_name[0]) printf("%13s   %d\n",de.d_name,(int)de.d_off);
       //      else dump_bytes(0,"empty dirent",&dir_sector_buffer[dir_sector_offset],32);
       if (!strcasecmp(de.d_name,dest_name)) {
-	// Found file, so will replace it
-	//	printf("%s already exists on the file system, beginning at cluster %d\n",name,(int)de.d_ino);
-	break;
+        // Found file, so will replace it
+        //	printf("%s already exists on the file system, beginning at cluster %d\n",name,(int)de.d_ino);
+        break;
       }
     }
     if (dir_sector==-1) {
@@ -2134,52 +2134,52 @@ int upload_file(char *name,char *dest_name)
       if (fat_opendir("/")) { retVal=-1; break; }
       struct dirent de;
       while(!fat_readdir(&de)) {
-	if (!de.d_name[0]) {
-	  if (0) printf("Found empty slot at dir_sector=%d, dir_sector_offset=%d\n",
-			dir_sector,dir_sector_offset);
+        if (!de.d_name[0]) {
+          if (0) printf("Found empty slot at dir_sector=%d, dir_sector_offset=%d\n",
+              dir_sector,dir_sector_offset);
 
-	  // Create directory entry, and write sector back to SD card
-	  unsigned char dir[32];
-	  bzero(dir,32);
+          // Create directory entry, and write sector back to SD card
+          unsigned char dir[32];
+          bzero(dir,32);
 
-	  // Write name
-	  for(int i=0;i<11;i++) dir[i]=0x20;
-	  for(int i=0;i<9;i++)
-	    if (dest_name[i]=='.') {
-	      // Write out extension
-	      for(int j=0;j<3;j++)
-		if (dest_name[i+1+j]) dir[8+j]=dest_name[i+1+j];
-	      break;
-	    } else if (!dest_name[i]) break;
-	    else dir[i]=dest_name[i];
+          // Write name
+          for(int i=0;i<11;i++) dir[i]=0x20;
+          for(int i=0;i<9;i++)
+            if (dest_name[i]=='.') {
+              // Write out extension
+              for(int j=0;j<3;j++)
+                if (dest_name[i+1+j]) dir[8+j]=dest_name[i+1+j];
+              break;
+            } else if (!dest_name[i]) break;
+            else dir[i]=dest_name[i];
 
-	  // Set file attributes (only archive bit)
-	  dir[0xb]=0x20;
+          // Set file attributes (only archive bit)
+          dir[0xb]=0x20;
 
-	  // Store create time and date
-	  time_t t=time(0);
-	  struct tm *tm=localtime(&t);
-	  dir[0xe]=(tm->tm_sec>>1)&0x1F;  // 2 second resolution
-	  dir[0xe]|=(tm->tm_min&0x7)<<5;
-	  dir[0xf]=(tm->tm_min&0x3)>>3;
-	  dir[0xf]|=(tm->tm_hour)<<2;
-	  dir[0x10]=tm->tm_mday&0x1f;
-	  dir[0x10]|=((tm->tm_mon+1)&0x7)<<5;
-	  dir[0x11]=((tm->tm_mon+1)&0x1)>>3;
-	  dir[0x11]|=(tm->tm_year-80)<<1;
+          // Store create time and date
+          time_t t=time(0);
+          struct tm *tm=localtime(&t);
+          dir[0xe]=(tm->tm_sec>>1)&0x1F;  // 2 second resolution
+          dir[0xe]|=(tm->tm_min&0x7)<<5;
+          dir[0xf]=(tm->tm_min&0x3)>>3;
+          dir[0xf]|=(tm->tm_hour)<<2;
+          dir[0x10]=tm->tm_mday&0x1f;
+          dir[0x10]|=((tm->tm_mon+1)&0x7)<<5;
+          dir[0x11]=((tm->tm_mon+1)&0x1)>>3;
+          dir[0x11]|=(tm->tm_year-80)<<1;
 
-	  //	  dump_bytes(0,"New directory entry",dir,32);
-	  
-	  // (Cluster and size we set after writing to the file)
+          //	  dump_bytes(0,"New directory entry",dir,32);
 
-	  // Copy back into directory sector, and write it
-	  bcopy(dir,&dir_sector_buffer[dir_sector_offset],32);
-	  if (write_sector(partition_start+dir_sector,dir_sector_buffer)) {
-	    printf("Failed to write updated directory sector.\n");
-	    retVal=-1; break; }
-	  
-	  break;
-	}
+          // (Cluster and size we set after writing to the file)
+
+          // Copy back into directory sector, and write it
+          bcopy(dir,&dir_sector_buffer[dir_sector_offset],32);
+          if (write_sector(partition_start+dir_sector,dir_sector_buffer)) {
+            printf("Failed to write updated directory sector.\n");
+            retVal=-1; break; }
+
+            break;
+        }
       }
     }
     if (dir_sector==-1) {
@@ -2202,12 +2202,12 @@ int upload_file(char *name,char *dest_name)
 
       int a_cluster=find_free_cluster(0);
       if (!a_cluster) {
-	printf("ERROR: Failed to find a free cluster.\n");
-	retVal=-1; break;
+        printf("ERROR: Failed to find a free cluster.\n");
+        retVal=-1; break;
       }
       if (allocate_cluster(a_cluster)) {
-	printf("ERROR: Could not allocate cluster $%x\n",a_cluster);
-	retVal=-1; break;	
+        printf("ERROR: Could not allocate cluster $%x\n",a_cluster);
+        retVal=-1; break;	
       }
 
       // Write cluster number into directory entry
@@ -2215,12 +2215,12 @@ int upload_file(char *name,char *dest_name)
       dir_sector_buffer[dir_sector_offset+0x1B]=(a_cluster>>8)&0xff;
       dir_sector_buffer[dir_sector_offset+0x14]=(a_cluster>>16)&0xff;
       dir_sector_buffer[dir_sector_offset+0x15]=(a_cluster>>24)&0xff;
-      
+
       if (write_sector(partition_start+dir_sector,dir_sector_buffer)) {
-	printf("ERROR: Failed to write updated directory sector after allocating first cluster.\n");
-	retVal=-1; break; }
-      
-      first_cluster_of_file=a_cluster;
+        printf("ERROR: Failed to write updated directory sector after allocating first cluster.\n");
+        retVal=-1; break; }
+
+        first_cluster_of_file=a_cluster;
     } // else printf("First cluster of file is $%x\n",first_cluster_of_file);
 
     // Now write the file out sector by sector, and allocate new clusters as required
@@ -2237,29 +2237,29 @@ int upload_file(char *name,char *dest_name)
 
     while(remaining_length>0) {
       if (sector_in_cluster>=sectors_per_cluster) {
-	// Advance to next cluster
-	// If we are currently the last cluster, then allocate a new one, and chain it in
+        // Advance to next cluster
+        // If we are currently the last cluster, then allocate a new one, and chain it in
 
-	int next_cluster=chained_cluster(file_cluster);
-	if (next_cluster==0||next_cluster>=0xffffff8) {
-	  next_cluster=find_free_cluster(file_cluster);
-	  if (allocate_cluster(next_cluster)) {
-	    printf("ERROR: Could not allocate cluster $%x\n",next_cluster);
-	    retVal=-1; break;
-	  }
-	  if (chain_cluster(file_cluster,next_cluster)) {
-	    printf("ERROR: Could not chain cluster $%x to $%x\n",file_cluster,next_cluster);
-	    retVal=-1; break;
-	  }
-	}
-	if (!next_cluster) {
-	  printf("ERROR: Could not find a free cluster\n");
-	  retVal=-1; break;
-	}
-	
-	
-	file_cluster=next_cluster;
-	sector_in_cluster=0;
+        int next_cluster=chained_cluster(file_cluster);
+        if (next_cluster==0||next_cluster>=0xffffff8) {
+          next_cluster=find_free_cluster(file_cluster);
+          if (allocate_cluster(next_cluster)) {
+            printf("ERROR: Could not allocate cluster $%x\n",next_cluster);
+            retVal=-1; break;
+          }
+          if (chain_cluster(file_cluster,next_cluster)) {
+            printf("ERROR: Could not chain cluster $%x to $%x\n",file_cluster,next_cluster);
+            retVal=-1; break;
+          }
+        }
+        if (!next_cluster) {
+          printf("ERROR: Could not find a free cluster\n");
+          retVal=-1; break;
+        }
+
+
+        file_cluster=next_cluster;
+        sector_in_cluster=0;
       }
 
       // Write sector
@@ -2268,14 +2268,14 @@ int upload_file(char *name,char *dest_name)
       int bytes=fread(buffer,1,512,f);
       sector_number=partition_start+first_cluster_sector+(sectors_per_cluster*(file_cluster-first_cluster))+sector_in_cluster;
       if (0) printf("T+%lld : Read %d bytes from file, writing to sector $%x (%d) for cluster %d\n",
-		    gettime_us()-start_usec,bytes,sector_number,sector_number,file_cluster);
+          gettime_us()-start_usec,bytes,sector_number,sector_number,file_cluster);
       printf("\rUploaded %lld bytes.",(long long)st.st_size-remaining_length);
       fflush(stdout);
-      
+
       if (write_sector(sector_number,buffer)) {
-	printf("ERROR: Failed to write to sector %d\n",sector_number);
-	retVal=-1;
-	break;
+        printf("ERROR: Failed to write to sector %d\n",sector_number);
+        retVal=-1;
+        break;
       }
       //      printf("T+%lld : after write.\n",gettime_us()-start_usec);
 
@@ -2295,13 +2295,13 @@ int upload_file(char *name,char *dest_name)
       printf("ERROR: Failed to write updated directory sector after updating file length.\n");
       retVal=-1; break; }
 
-    // Flush any pending sector writes out
-    execute_write_queue();
-    
-    if (time(0)==upload_start) upload_start=time(0)-1;
-    printf("\rUploaded %lld bytes in %lld seconds (%.1fKB/sec)\n",
-	   (long long)st.st_size,(long long)time(0)-upload_start,st.st_size*1.0/1024/(time(0)-upload_start));
-    
+      // Flush any pending sector writes out
+      execute_write_queue();
+
+      if (time(0)==upload_start) upload_start=time(0)-1;
+      printf("\rUploaded %lld bytes in %lld seconds (%.1fKB/sec)\n",
+          (long long)st.st_size,(long long)time(0)-upload_start,st.st_size*1.0/1024/(time(0)-upload_start));
+
   } while(0);
 
   return retVal;
@@ -2319,13 +2319,13 @@ int download_slot(int slot_number,char *dest_name)
       retVal=-1;
       break;
     }
-    
+
     if (slot_number<0||slot_number>=syspart_slot_count) {
       printf("ERROR: Invalid slot number (valid range is 0 -- %d)\n",syspart_slot_count);
       retVal=-1;
       break;
     }
-    
+
     FILE *f=fopen(dest_name,"w");
     if (!f) {
       printf("ERROR: Could not open file '%s' for writing\n",dest_name);
@@ -2338,20 +2338,20 @@ int download_slot(int slot_number,char *dest_name)
       unsigned char sector[512];
       int sector_num=syspart_start+syspart_freeze_area+syspart_slotdir_sectors+slot_number*syspart_slot_size+i;
       if (!i) printf("Downloading %d sectors beginning at sector $%08x\n",
-		     syspart_slot_size,sector_num);
+          syspart_slot_size,sector_num);
       if (read_sector(sector_num,sector,0))
-	{
-	  printf("ERROR: Could not read sector %d/%d of freeze slot %d (absolute sector %d)\n",
-		 i,syspart_slot_size,slot_number,sector_num);
-	  retVal=-1;
-	  break;
-	}
+      {
+        printf("ERROR: Could not read sector %d/%d of freeze slot %d (absolute sector %d)\n",
+            i,syspart_slot_size,slot_number,sector_num);
+        retVal=-1;
+        break;
+      }
       fwrite(sector,512,1,f);
       printf("."); fflush(stdout);
     }
     fclose(f);
     printf("\n");
-    
+
   } while(0);
 
   return retVal;
@@ -2364,7 +2364,7 @@ int download_file(char *dest_name,char *local_name,int showClusters)
   do {
 
     time_t upload_start=time(0);
-    
+
     if (!file_system_found) open_file_system();
     if (!file_system_found) {
       fprintf(stderr,"ERROR: Could not open file system.\n");
@@ -2378,9 +2378,9 @@ int download_file(char *dest_name,char *local_name,int showClusters)
       // if (de.d_name[0]) printf("%13s   %d\n",de.d_name,(int)de.d_off);
       //      else dump_bytes(0,"empty dirent",&dir_sector_buffer[dir_sector_offset],32);
       if (!strcasecmp(de.d_name,dest_name)) {
-	// Found file, so will replace it
-	//	printf("%s already exists on the file system, beginning at cluster %d\n",name,(int)de.d_ino);
-	break;
+        // Found file, so will replace it
+        //	printf("%s already exists on the file system, beginning at cluster %d\n",name,(int)de.d_ino);
+        break;
       }
     }
     if (dir_sector==-1) {
@@ -2406,52 +2406,52 @@ int download_file(char *dest_name,char *local_name,int showClusters)
     if (!showClusters) {
       f=fopen(local_name,"w");
       if (!f) {
-	printf("ERROR: Could not open file '%s' for writing.\n",local_name);
-	retVal=-1; break;
+        printf("ERROR: Could not open file '%s' for writing.\n",local_name);
+        retVal=-1; break;
       }
     } else printf("Clusters: %d",file_cluster);
 
     while(remaining_bytes) {
       if (sector_in_cluster>=sectors_per_cluster) {
-	// Advance to next cluster
-	// If we are currently the last cluster, then allocate a new one, and chain it in
+        // Advance to next cluster
+        // If we are currently the last cluster, then allocate a new one, and chain it in
 
-	int next_cluster=chained_cluster(file_cluster);	
-	if (next_cluster==0||next_cluster>=0xffffff8) {
-	  printf("\n?  PREMATURE END OF FILE ERROR\n");
-	  if (f) fclose(f);
-	  retVal=-1; break;
-	}
-	if (showClusters) {
-	  if (next_cluster==(file_cluster+1)) printf("."); else printf("%d, %d",file_cluster,next_cluster);
-	}
-	  
-	file_cluster=next_cluster;
-	sector_in_cluster=0;
+        int next_cluster=chained_cluster(file_cluster);	
+        if (next_cluster==0||next_cluster>=0xffffff8) {
+          printf("\n?  PREMATURE END OF FILE ERROR\n");
+          if (f) fclose(f);
+          retVal=-1; break;
+        }
+        if (showClusters) {
+          if (next_cluster==(file_cluster+1)) printf("."); else printf("%d, %d",file_cluster,next_cluster);
+        }
+
+        file_cluster=next_cluster;
+        sector_in_cluster=0;
       }
 
       if (f) {
-	// Read sector
-	sector_number=partition_start+first_cluster_sector+(sectors_per_cluster*(file_cluster-first_cluster))+sector_in_cluster;
-	
-	if (read_sector(sector_number,download_buffer,0)) {
-	  printf("ERROR: Failed to read to sector %d\n",sector_number);
-	  retVal=-1;
-	  if (f) fclose(f);
-	  break;
-	}
+        // Read sector
+        sector_number=partition_start+first_cluster_sector+(sectors_per_cluster*(file_cluster-first_cluster))+sector_in_cluster;
 
-	if (remaining_bytes>=512)
-	  fwrite(download_buffer,512,1,f);
-	else
-	  fwrite(download_buffer,remaining_bytes,1,f);
+        if (read_sector(sector_number,download_buffer,0)) {
+          printf("ERROR: Failed to read to sector %d\n",sector_number);
+          retVal=-1;
+          if (f) fclose(f);
+          break;
+        }
+
+        if (remaining_bytes>=512)
+          fwrite(download_buffer,512,1,f);
+        else
+          fwrite(download_buffer,remaining_bytes,1,f);
       }
-      
+
       if (0) printf("T+%lld : Read %d bytes from file, writing to sector $%x (%d) for cluster %d\n",
-		    gettime_us()-start_usec,(int)de.d_off,sector_number,sector_number,file_cluster);
+          gettime_us()-start_usec,(int)de.d_off,sector_number,sector_number,file_cluster);
       if (!showClusters) printf("\rDownloaded %lld bytes.",(long long)de.d_off-remaining_bytes);
       fflush(stdout);
-      
+
       //      printf("T+%lld : after write.\n",gettime_us()-start_usec);
 
       sector_in_cluster++;
@@ -2459,13 +2459,13 @@ int download_file(char *dest_name,char *local_name,int showClusters)
     }
 
     if (f) fclose(f);
-    
+
     if (time(0)==upload_start) upload_start=time(0)-1;
     if (!showClusters) {
       printf("\rDownloaded %lld bytes in %lld seconds (%.1fKB/sec)\n",
-	     (long long)de.d_off,(long long)time(0)-upload_start,de.d_off*1.0/1024/(time(0)-upload_start));
+          (long long)de.d_off,(long long)time(0)-upload_start,de.d_off*1.0/1024/(time(0)-upload_start));
     } else printf("\n");
-    
+
   } while(0);
 
   return retVal;
