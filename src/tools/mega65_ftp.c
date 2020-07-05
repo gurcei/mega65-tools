@@ -1703,6 +1703,7 @@ unsigned char buf[512];
 
 unsigned int get_next_cluster(int cluster)
 {
+  // printf("get_next_cluster(%d)\n", cluster);
   unsigned int retVal=0xFFFFFFFF;
 
   do {
@@ -1719,6 +1720,9 @@ unsigned int get_next_cluster(int cluster)
       (buf[cluster_sector_offset+1]<<8)|
       (buf[cluster_sector_offset+2]<<16)|
       (buf[cluster_sector_offset+3]<<24);
+
+    // mask out highest 4 bits (these seem to be flags on some systems)
+    retVal &= 0x0fffffff;
 
   } while(0);
   return retVal;
