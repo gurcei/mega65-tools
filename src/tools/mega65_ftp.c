@@ -1931,12 +1931,21 @@ int fat_readdir(struct dirent *d)
     if (!vfatEntry)
     {
       int namelen=0;
+      int nt_flags = dir_sector_buffer[dir_sector_offset+0x0C];
+      int basename_lowercase = nt_flags & 0x08;
+      int extension_lowercase = nt_flags & 0x10;
+
       // get the 8-byte filename
       if (dir_sector_buffer[dir_sector_offset]) {
         for(int i=0;i<8;i++)
         {
           if (dir_sector_buffer[dir_sector_offset+i])
-            d->d_name[namelen++]=dir_sector_buffer[dir_sector_offset+i];
+          {
+            int c = dir_sector_buffer[dir_sector_offset+i];
+            if (basename_lowercase)
+              c = tolower(c);
+            d->d_name[namelen++]=c;
+          }
         }
         while(namelen&&d->d_name[namelen-1]==' ') namelen--;
       }
@@ -1944,8 +1953,15 @@ int fat_readdir(struct dirent *d)
       if (dir_sector_buffer[dir_sector_offset+8]&&dir_sector_buffer[dir_sector_offset+8]!=' ') {
         d->d_name[namelen++]='.';
         for(int i=0;i<3;i++)
+        {
           if (dir_sector_buffer[dir_sector_offset+8+i])
-            d->d_name[namelen++]=dir_sector_buffer[dir_sector_offset+8+i];
+          {
+            int c = dir_sector_buffer[dir_sector_offset+8+i];
+            if (extension_lowercase)
+              c = tolower(c);
+            d->d_name[namelen++]=c;
+          }
+        }
         while(namelen&&d->d_name[namelen-1]==' ') namelen--;
       }
       d->d_name[namelen]=0;
