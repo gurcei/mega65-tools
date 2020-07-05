@@ -63,6 +63,8 @@ int cpu_stopped=0;
 int open_file_system(void);
 int download_slot(int sllot,char *dest_name);
 int download_file(char *dest_name,char *local_name,int showClusters);
+void show_clustermap(void);
+void show_cluster(void);
 int show_directory(char *path);
 int rename_file(char *name,char *dest_name);
 int upload_file(char *name,char *dest_name);
@@ -136,6 +138,11 @@ unsigned char mbr[512];
 unsigned char fat_mbr[512];
 unsigned char syspart_sector0[512];
 unsigned char syspart_configsector[512];
+
+int dirent_raw = 0;
+int clustermap_start = 0;
+int clustermap_count = 0;
+int cluster_num = 0;
 
 #ifdef WINDOWS
 #include <windows.h>
@@ -764,6 +771,8 @@ int execute_command(char *cmd)
   }
   else if (sscanf(cmd,"sector $%x",&sector_num)==1) {
     show_sector(sector_num);
+  } else if (sscanf(cmd,"dirent_raw %d", &dirent_raw) == 1) {
+    printf("dirent_raw = %d\n", dirent_raw);
   }
   else if (sscanf(cmd,"dir %s",src)==1) {
     show_directory(src);
@@ -779,16 +788,27 @@ int execute_command(char *cmd)
   }
   else if (sscanf(cmd,"get %s",src)==1) {
     download_file(src,src,0);
+  } else if (sscanf(cmd, "clustermap %d %d", &clustermap_start, &clustermap_count)==2) {
+    show_clustermap();
+  } else if (sscanf(cmd, "clustermap %d", &clustermap_start)==1) {
+    clustermap_count = 1;
+    show_clustermap();
   } else if (sscanf(cmd,"clusters %s",src)==1) {
     download_file(src,src,1);
+  } else if (sscanf(cmd,"cluster %d", &cluster_num)==1) {
+    show_cluster();
   } else if (!strcasecmp(cmd,"help")) {
     printf("MEGA65 File Transfer Program Command Reference:\n");
     printf("\n");
     printf("dir [directory] - show contents of current or specified directory.\n");
     printf("put <file> [destination name] - upload file to SD card, and optionally rename it destination file.\n");
     printf("get <file> [destination name] - download file from SD card, and optionally rename it destination file.\n");
-    printf("clusters <file> - show cluster chain of specified file.\n");
+    printf("sector <num> - shows a hexdump of the 512-bytes within the specified sector.\n");
+    printf("clusters <decimal>|<$hex> - show cluster chain of specified file.\n");
     printf("getslot <slot> <destination name> - download a freeze slot.\n");
+    printf("dirent_raw 0|1 - flag to hide/show 32-byte dump of directory entries.\n");
+    printf("clustermap <startidx> [<count>] - show cluster-map entries for specified range.\n");
+    printf("cluster <num> - dump the entire contents of this cluster.\n");
     printf("exit - leave this programme.\n");
     printf("quit - leave this programme.\n");
   } else {
@@ -1967,7 +1987,8 @@ int fat_readdir(struct dirent *d)
       d->d_name[namelen]=0;
     }
 
-    // if (d->d_name[0]) dump_bytes(0,"dirent raw",&dir_sector_buffer[dir_sector_offset],32);
+    if (dirent_raw && d->d_name[0])
+      dump_bytes(0,"dirent raw",&dir_sector_buffer[dir_sector_offset],32);
 
     d->d_off= //  XXX As a hack we put the size here
       (dir_sector_buffer[dir_sector_offset+0x1C]<<0)|
@@ -2191,6 +2212,61 @@ int show_directory(char *path)
   } while(0);
 
   return retVal;
+}
+
+int read_int32_from_offset_in_buffer(int offset)
+{
+  int val =
+    (dir_sector_buffer[offset]<<0)
+    |(dir_sector_buffer[offset+1]<<8)
+    |(dir_sector_buffer[offset+2]<<16)
+    |(dir_sector_buffer[offset+3]<<24);
+
+  return val;
+}
+
+void show_clustermap(void)
+{
+  int clustermap_end = clustermap_start + clustermap_count;
+  int previous_clustermap_sector = 0;
+  int abs_fat1_sector = partition_start + fat1_sector;
+
+  for (int clustermap_idx = clustermap_start; clustermap_idx < clustermap_end; clustermap_idx++)
+  {
+    int clustermap_sector = abs_fat1_sector + (clustermap_idx*4) / 512;
+    int clustermap_offset = (clustermap_idx*4) % 512;
+
+    //printf("clustermap_sector = %d\nclustermap_offset=%d\n", clustermap_sector, clustermap_offset);
+
+    // do we need to read in the next sector?
+    if (clustermap_sector != previous_clustermap_sector)
+    {
+      int retVal=read_sector(clustermap_sector,dir_sector_buffer,0);
+      if (retVal)
+      {
+        fprintf(stderr, "Failed to read next sector(%d)\n", clustermap_sector);
+        return;
+      }
+      previous_clustermap_sector = clustermap_sector;
+    }
+
+    int clustermap_val = read_int32_from_offset_in_buffer(clustermap_offset);
+    clustermap_val &= 0x0fffffff; // map out flags in top 4 bits
+    printf("%d:  %d  ($%08X)\n", clustermap_idx, clustermap_val, clustermap_val);
+  }
+}
+
+void show_cluster(void)
+{
+  char str[50];
+  int abs_cluster2_sector = partition_start + first_cluster_sector + (cluster_num-2)*sectors_per_cluster;
+
+  for (int idx = 0; idx < sectors_per_cluster; idx++)
+  {
+    read_sector(abs_cluster2_sector + idx, dir_sector_buffer, 0);
+    sprintf(str, "Sector %d:\n", abs_cluster2_sector + idx);
+    dump_bytes(0,str,dir_sector_buffer,512);
+  }
 }
 
 int rename_file(char *name,char *dest_name)
