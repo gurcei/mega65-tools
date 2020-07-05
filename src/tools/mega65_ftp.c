@@ -1881,8 +1881,6 @@ int fat_readdir(struct dirent *d)
     }
 
     // ignore any vfat files starting with '.' (such as mac osx '._*' metadata files)
-    // NOTE: This present technique won't work, as I'll need to parse the vfat
-    // entry first to catch the '.'
     if (vfatEntry && d->d_name[0] == '.') {
       //printf("._ vfat hide\n");
       d->d_name[0] = 0;
@@ -1895,6 +1893,28 @@ int fat_readdir(struct dirent *d)
       d->d_name[0] = 0;
       return 0;
     }
+    
+    // if the DOS 8.3 entry is a deleted-entry, then ignore
+    if (dir_sector_buffer[dir_sector_offset] == 0xE5)
+    {
+      d->d_name[0] = 0;
+      return 0;
+    }
+
+    int attrib = dir_sector_buffer[dir_sector_offset+0x0B];
+
+    // if this is the volume-name of the partition, then ignore
+    if (attrib == 0x08) {
+      d->d_name[0] = 0;
+      return 0;
+    }
+
+    // if the hidden attribute is turned on, then ignore
+    if (attrib & 0x02) {
+      d->d_name[0] = 0;
+      return 0;
+    }
+    
 
     // Put cluster number in d_ino
     d->d_ino=
@@ -1927,7 +1947,7 @@ int fat_readdir(struct dirent *d)
       d->d_name[namelen]=0;
     }
 
-    //    if (d->d_name[0]) dump_bytes(0,"dirent raw",&dir_sector_buffer[dir_sector_offset],32);
+    // if (d->d_name[0]) dump_bytes(0,"dirent raw",&dir_sector_buffer[dir_sector_offset],32);
 
     d->d_off= //  XXX As a hack we put the size here
       (dir_sector_buffer[dir_sector_offset+0x1C]<<0)|
@@ -1935,8 +1955,8 @@ int fat_readdir(struct dirent *d)
       (dir_sector_buffer[dir_sector_offset+0x1E]<<16)|
       (dir_sector_buffer[dir_sector_offset+0x1F]<<24);
     d->d_reclen=dir_sector_buffer[dir_sector_offset+0xb]; // XXX as a hack, we put DOS file attributes here
-    if (d->d_off&0xC8) d->d_type=DT_UNKNOWN;
-    else if (d->d_off&0x10) d->d_type=DT_DIR;
+    if (d->d_reclen&0xC8) d->d_type=DT_UNKNOWN;
+    else if (d->d_reclen&0x10) d->d_type=DT_DIR;
     else d->d_type=DT_REG;
 
   } while(0);
@@ -2140,8 +2160,13 @@ int show_directory(char *path)
     if (fat_opendir(path)) { retVal=-1; break; }
     // printf("Opened directory, dir_sector=%d (absolute sector = %d)\n",dir_sector,partition_start+dir_sector);
     while(!fat_readdir(&de)) {
-      if (de.d_name[0]&&(de.d_off>=0))
-        printf("%12d %s\n",(int)de.d_off,de.d_name);
+      if (de.d_name[0])
+      {
+        if (de.d_type == DT_DIR)
+          printf("%12s %s\n", "<dir>",de.d_name);
+        else
+          printf("%12d %s\n",(int)de.d_off,de.d_name);
+      }
     }
   } while(0);
 
