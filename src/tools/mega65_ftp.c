@@ -2290,7 +2290,7 @@ void dump_sectors(void)
     printf("\rSaving... (%d%%)", (sector-secdump_start)*100/secdump_count);
   }
   fclose(fsave);
-  printf("Saved to file \"%s\"...\n", secdump_file);
+  printf("\rSaved to file \"%s\"...\n", secdump_file);
 }
 
 void show_secinfo(void)
