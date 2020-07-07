@@ -66,6 +66,7 @@ int download_file(char *dest_name,char *local_name,int showClusters);
 void show_clustermap(void);
 void show_cluster(void);
 void dump_sectors(void);
+void show_secinfo(void);
 int show_directory(char *path);
 int rename_file(char *name,char *dest_name);
 int upload_file(char *name,char *dest_name);
@@ -803,6 +804,8 @@ int execute_command(char *cmd)
     show_cluster();
   } else if (sscanf(cmd,"secdump %s %d %d", secdump_file, &secdump_start, &secdump_count)==3) {
     dump_sectors();
+  } else if (!strcmp(cmd, "secinfo")) {
+    show_secinfo();
   } else if (!strcasecmp(cmd,"help")) {
     printf("MEGA65 File Transfer Program Command Reference:\n");
     printf("\n");
@@ -816,6 +819,7 @@ int execute_command(char *cmd)
     printf("clustermap <startidx> [<count>] - show cluster-map entries for specified range.\n");
     printf("cluster <num> - dump the entire contents of this cluster.\n");
     printf("secdump <filename> <startsec> <count> - dump the specified sector range to a file.\n");
+    printf("secinfo - lists the locations of various useful sectors, for easy reference.\n");
     printf("exit - leave this programme.\n");
     printf("quit - leave this programme.\n");
   } else {
@@ -2287,6 +2291,24 @@ void dump_sectors(void)
   }
   fclose(fsave);
   printf("Saved to file \"%s\"...\n", secdump_file);
+}
+
+void show_secinfo(void)
+{
+  int abs_fat1_sector = partition_start + fat1_sector;
+  int abs_fat2_sector = partition_start + fat2_sector;
+  int abs_cluster2_sector = partition_start + first_cluster_sector;
+
+  if (!file_system_found) open_file_system();
+  printf("\n");
+  printf("  SECTOR : CONTENT\n");    
+  printf("  ------   -------\n");
+  printf("% 8d : MBR (Master Boot Record)\n", 0);
+  printf("% 8d : VBR of 1st Partition\n", partition_start);
+  printf("% 8d : 1st FAT (cluster-chain map)\n", abs_fat1_sector);
+  printf("% 8d : 2nd FAT (backup)\n", abs_fat2_sector);
+  printf("% 8d : cluster #2 (root-directory table)\n", abs_cluster2_sector);
+  printf("\n");
 }
 
 int rename_file(char *name,char *dest_name)
