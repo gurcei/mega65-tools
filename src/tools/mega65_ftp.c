@@ -65,6 +65,7 @@ int download_slot(int sllot,char *dest_name);
 int download_file(char *dest_name,char *local_name,int showClusters);
 void show_clustermap(void);
 void show_cluster(void);
+void dump_sectors(void);
 int show_directory(char *path);
 int rename_file(char *name,char *dest_name);
 int upload_file(char *name,char *dest_name);
@@ -143,6 +144,9 @@ int dirent_raw = 0;
 int clustermap_start = 0;
 int clustermap_count = 0;
 int cluster_num = 0;
+char secdump_file[256] = { 0 };
+int secdump_start = 0;
+int secdump_count = 0;
 
 #ifdef WINDOWS
 #include <windows.h>
@@ -797,6 +801,8 @@ int execute_command(char *cmd)
     download_file(src,src,1);
   } else if (sscanf(cmd,"cluster %d", &cluster_num)==1) {
     show_cluster();
+  } else if (sscanf(cmd,"secdump %s %d %d", secdump_file, &secdump_start, &secdump_count)==3) {
+    dump_sectors();
   } else if (!strcasecmp(cmd,"help")) {
     printf("MEGA65 File Transfer Program Command Reference:\n");
     printf("\n");
@@ -809,6 +815,7 @@ int execute_command(char *cmd)
     printf("dirent_raw 0|1 - flag to hide/show 32-byte dump of directory entries.\n");
     printf("clustermap <startidx> [<count>] - show cluster-map entries for specified range.\n");
     printf("cluster <num> - dump the entire contents of this cluster.\n");
+    printf("secdump <filename> <startsec> <count> - dump the specified sector range to a file.\n");
     printf("exit - leave this programme.\n");
     printf("quit - leave this programme.\n");
   } else {
@@ -2267,6 +2274,19 @@ void show_cluster(void)
     sprintf(str, "Sector %d:\n", abs_cluster2_sector + idx);
     dump_bytes(0,str,dir_sector_buffer,512);
   }
+}
+
+void dump_sectors(void)
+{
+  FILE* fsave = fopen(secdump_file, "wb");
+  for (int sector = secdump_start; sector < (secdump_start+secdump_count); sector++)
+  {
+    read_sector(sector, dir_sector_buffer, 1);
+    fwrite(dir_sector_buffer, 1, 512, fsave);
+    printf("\rSaving... (%d%%)", (sector-secdump_start)*100/secdump_count);
+  }
+  fclose(fsave);
+  printf("Saved to file \"%s\"...\n", secdump_file);
 }
 
 int rename_file(char *name,char *dest_name)
