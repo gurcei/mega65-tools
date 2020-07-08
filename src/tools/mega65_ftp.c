@@ -66,7 +66,9 @@ int download_file(char *dest_name,char *local_name,int showClusters);
 void show_clustermap(void);
 void show_cluster(void);
 void dump_sectors(void);
+void restore_sectors(void);
 void show_secinfo(void);
+void poke_sector(void);
 int show_directory(char *path);
 int rename_file(char *name,char *dest_name);
 int upload_file(char *name,char *dest_name);
@@ -148,6 +150,11 @@ int cluster_num = 0;
 char secdump_file[256] = { 0 };
 int secdump_start = 0;
 int secdump_count = 0;
+char secrestore_file[256] = { 0 };
+int secrestore_start = 0;
+int poke_secnum = 0;
+int poke_offset = 0;
+int poke_value = 0;
 
 #ifdef WINDOWS
 #include <windows.h>
@@ -804,8 +811,12 @@ int execute_command(char *cmd)
     show_cluster();
   } else if (sscanf(cmd,"secdump %s %d %d", secdump_file, &secdump_start, &secdump_count)==3) {
     dump_sectors();
+  } else if (sscanf(cmd, "secrestore %s %d", secrestore_file, &secrestore_start)==2) {
+    restore_sectors();
   } else if (!strcmp(cmd, "secinfo")) {
     show_secinfo();
+  } else if (sscanf(cmd, "poke %d %d %d", &poke_secnum, &poke_offset, &poke_value)==3) {
+    poke_sector();
   } else if (!strcasecmp(cmd,"help")) {
     printf("MEGA65 File Transfer Program Command Reference:\n");
     printf("\n");
@@ -819,7 +830,9 @@ int execute_command(char *cmd)
     printf("clustermap <startidx> [<count>] - show cluster-map entries for specified range.\n");
     printf("cluster <num> - dump the entire contents of this cluster.\n");
     printf("secdump <filename> <startsec> <count> - dump the specified sector range to a file.\n");
+    printf("secrestore <filename> <startsec> - restore a dumped file back into the specified sector area.\n");
     printf("secinfo - lists the locations of various useful sectors, for easy reference.\n");
+    printf("poke <sector> <offset> <val> - poke a value into a sector, at the desired offset.\n");
     printf("exit - leave this programme.\n");
     printf("quit - leave this programme.\n");
   } else {
@@ -2290,7 +2303,31 @@ void dump_sectors(void)
     printf("\rSaving... (%d%%)", (sector-secdump_start)*100/secdump_count);
   }
   fclose(fsave);
-  printf("\rSaved to file \"%s\"...\n", secdump_file);
+  printf("\rSaved to file \"%s\".         \n", secdump_file);
+}
+
+void restore_sectors(void)
+{
+  struct stat st;
+  stat(secrestore_file, &st);
+  int secrestore_count = st.st_size / 512;
+
+  FILE* fload = fopen(secrestore_file, "rb");
+  for (int sector = secrestore_start; sector < (secrestore_start+secrestore_count); sector++)
+  {
+    fread(dir_sector_buffer, 1, 512, fload);
+    write_sector(sector, dir_sector_buffer);
+    printf("\rLoading... (%d%%)", (sector-secrestore_start)*100/secrestore_count);
+  }
+  fclose(fload);
+  printf("\rLoaded file \"%s\" at starting-sector %d.\n", secrestore_file, secrestore_start);
+}
+
+void poke_sector(void)
+{
+    read_sector(poke_secnum, dir_sector_buffer, 1);
+    dir_sector_buffer[poke_offset] = poke_value;
+    write_sector(poke_secnum, dir_sector_buffer);
 }
 
 void show_secinfo(void)
@@ -2374,6 +2411,7 @@ int upload_file(char *name,char *dest_name)
     if (stat(name,&st)) {
       fprintf(stderr,"ERROR: Could not stat file '%s'\n",name);
       perror("stat() failed");
+      return -1;
     }
     //    printf("File '%s' is %ld bytes long.\n",name,(long)st.st_size);
 
