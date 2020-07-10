@@ -332,55 +332,6 @@ size_t serialport_read(int fd, uint8_t * buffer, size_t size)
   return read(fd,buffer,size);
 }
 
-void set_serial_speed(int fd,int serial_speed)
-{
-  fcntl(fd,F_SETFL,fcntl(fd, F_GETFL, NULL)|O_NONBLOCK);
-  struct termios t;
-
-  if (fd<0) {
-    fprintf(stderr,"WARNING: serial port file descriptor is -1\n");    
-  }
-  
-#ifdef __APPLE__
-  speed_t speed = serial_speed;
-  fprintf(stderr,"Setting serial speed to %d bps using OSX method.\n",speed); 
-  if (ioctl(fd, IOSSIOSPEED, &speed) == -1) {
-    perror("Failed to set output baud rate using IOSSIOSPEED");
-  }
-  if (tcgetattr(fd, &t)) perror("Failed to get terminal parameters");
-  cfmakeraw(&t);
-  if (tcsetattr(fd, TCSANOW, &t)) perror("Failed to set OSX terminal parameters");  
-#else  
-  if (serial_speed==230400) {
-    if (cfsetospeed(&t, B230400)) perror("Failed to set output baud rate");
-    if (cfsetispeed(&t, B230400)) perror("Failed to set input baud rate");
-  } else if (serial_speed==2000000) {
-    if (cfsetospeed(&t, B2000000)) perror("Failed to set output baud rate");
-    if (cfsetispeed(&t, B2000000)) perror("Failed to set input baud rate");
-  } else if (serial_speed==1000000) {
-    if (cfsetospeed(&t, B1000000)) perror("Failed to set output baud rate");
-    if (cfsetispeed(&t, B1000000)) perror("Failed to set input baud rate");
-  } else if (serial_speed==1500000) {
-    if (cfsetospeed(&t, B1500000)) perror("Failed to set output baud rate");
-    if (cfsetispeed(&t, B1500000)) perror("Failed to set input baud rate");
-  } else {
-    if (cfsetospeed(&t, B4000000)) perror("Failed to set output baud rate");
-    if (cfsetispeed(&t, B4000000)) perror("Failed to set input baud rate");
-  }
-
-  t.c_cflag &= ~PARENB;
-  t.c_cflag &= ~CSTOPB;
-  t.c_cflag &= ~CSIZE;
-  t.c_cflag &= ~CRTSCTS;
-  t.c_cflag |= CS8 | CLOCAL;
-  t.c_lflag &= ~(ICANON | ISIG | IEXTEN | ECHO | ECHOE);
-  t.c_iflag &= ~(BRKINT | ICRNL | IGNBRK | IGNCR | INLCR |
-                 INPCK | ISTRIP | IXON | IXOFF | IXANY | PARMRK);
-  t.c_oflag &= ~OPOST;
-  if (tcsetattr(fd, TCSANOW, &t)) perror("Failed to set terminal parameters");
-#endif
-  
-}
 #endif
 
 // From os.c in serval-dna
@@ -1012,6 +963,11 @@ int sdhc_check(void)
 {
   unsigned char buffer[512];
 
+  sleep(1);
+  unsigned char read_buff[8192];
+  // flush out any serial data that occurred after the restart.
+  serialport_read(fd,read_buff,8192);
+
   sdhc=-1;
   
   int r0=read_sector(0,buffer,1);
@@ -1145,6 +1101,7 @@ int fetch_ram_cacheable(unsigned long address,unsigned int count,unsigned char *
 
 int detect_mode(void)
 {
+  uint8_t read_buff[8192];
   /*
     Set saw_c64_mode or saw_c65_mode according to what we can discover. 
     We can look at the C64/C65 charset bit in $D030 for a good clue.
@@ -1155,6 +1112,9 @@ int detect_mode(void)
   saw_c65_mode=0;
   saw_c64_mode=0;
   
+  // flush out any serial data that occurred after the restart.
+  serialport_read(fd,read_buff,8192);
+
   unsigned char mem_buff[8192];
   fetch_ram(0xffd3030,1,mem_buff);
   while(mem_buff[0]&0x01) {
@@ -1179,7 +1139,7 @@ int detect_mode(void)
     // or boot attempt from floppy to finish
     for (int i=0;i<10;i++) {
       int pc=get_pc();
-      if (pc>=0xe1ae&&pc<=0xe1b4) in_range++; else {
+      if (pc>=0xe1a0&&pc<=0xe1b4) in_range++; else {
 	// C65 ROM does checksum, so wait a while if it is in that range
 	if (pc>=0xb000&&pc<0xc000) sleep(1);
 	// Or booting from internal drive is also slow
@@ -1269,6 +1229,7 @@ int load_helper(void)
       process_waiting(fd);
       
       // Launch helper programme
+      sleep(1);
       snprintf(cmd,1024,"g080d\r");
       slow_write(fd,cmd,strlen(cmd),500);
       snprintf(cmd,1024,"t0\r");
