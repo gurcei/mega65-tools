@@ -44,6 +44,8 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 
+#define DT_FREESLOT 0xff
+
 #ifdef APPLE
 static const int B1000000 = 1000000;
 static const int B1500000 = 1500000;
@@ -1876,6 +1878,7 @@ int fat_readdir(struct dirent *d)
   int retVal=0;
   int vfatEntry = 0;
   int deletedEntry = 0;
+  d->d_type = 0;
 
   do {
 
@@ -2022,6 +2025,7 @@ int fat_readdir(struct dirent *d)
     d->d_reclen=dir_sector_buffer[dir_sector_offset+0xb]; // XXX as a hack, we put DOS file attributes here
     if (d->d_reclen&0xC8) d->d_type=DT_UNKNOWN;
     else if (d->d_reclen&0x10) d->d_type=DT_DIR;
+    else if (d->d_reclen == 0 && d->d_name[0] == 0) d->d_type=DT_FREESLOT;
     else d->d_type=DT_REG;
 
   } while(0);
@@ -2440,7 +2444,7 @@ int upload_file(char *name,char *dest_name)
       if (fat_opendir("/")) { retVal=-1; break; }
       struct dirent de;
       while(!fat_readdir(&de)) {
-        if (!de.d_name[0]) {
+        if (!de.d_name[0] && de.d_type==DT_FREESLOT) {
           if (0) printf("Found empty slot at dir_sector=%d, dir_sector_offset=%d\n",
               dir_sector,dir_sector_offset);
 
