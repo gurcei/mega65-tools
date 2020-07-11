@@ -1568,6 +1568,10 @@ int read_sector(const unsigned int sector_number,unsigned char *buffer,int noCac
     int cachedRead=0;
 
     if (!noCacheP) {
+      // flush the cache if it is full
+      if (sector_cache_count >= SECTOR_CACHE_SIZE)
+        sector_cache_count = 0;
+
       for(int i=0;i<sector_cache_count;i++) {
         if (sector_cache_sectors[i]==sector_number) {
           bcopy(sector_cache[i],buffer,512);
@@ -2302,7 +2306,7 @@ void dump_sectors(void)
   FILE* fsave = fopen(secdump_file, "wb");
   for (int sector = secdump_start; sector < (secdump_start+secdump_count); sector++)
   {
-    read_sector(sector, dir_sector_buffer, 1);
+    read_sector(sector, dir_sector_buffer, 0);
     fwrite(dir_sector_buffer, 1, 512, fsave);
     printf("\rSaving... (%d%%)", (sector-secdump_start)*100/secdump_count);
   }
